@@ -1,0 +1,42 @@
+// run the following command to generate the python classes
+// python -m grpc_tools.protoc -I../../../ --python_out=. --pyi_out=. --grpc_python_out=. ../../../game.proto
+
+// run the following commands to generate the CPP objects
+// protoc -I ../../../  --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` ../../../game.proto
+// protoc -I ../../../ --cpp_out=.  ../../../game.proto
+
+syntax = "proto3";
+
+service Game {
+	rpc GetGameMeta(Empty) returns (GameMeta) {}
+	rpc SetGameMeta(GameMeta) returns (Empty) {}
+	rpc Reset(Empty) returns (Empty) {}
+	rpc SuggestNextMove(GameState) returns (GameState) {}
+	rpc GetLastGameState(Empty) returns (GameState) {}
+}
+
+enum ModeType {
+    AI_STANDARD = 0;
+    AI_PRO = 1;
+    PVP_STANDARD = 2;
+	PVP_PRO = 3;
+}
+
+message Empty {}
+
+message GameMeta {
+	bool _initialized = 1;
+	uint64 gameId = 2; // can be ommited, last_updated?
+	ModeType mode = 3;
+	uint64 gridSize = 4;
+}
+
+message GameState {
+	bytes board = 1;
+	uint64 p1_captures = 2;
+	uint64 p0_captures = 3;
+	uint64 num_turns = 4;
+	bool is_end = 5;
+	
+	// include time to think
+}
