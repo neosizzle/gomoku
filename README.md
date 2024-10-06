@@ -23,5 +23,9 @@ Libs: -L${libdir} -lre2
 Cflags: -I${includedir} -DNOMINMAX
 ```
 
+> Before running the examples, generate the grpc object files using the commands listed in game.proto
+
 A successful installation should run the example like so:
 
+![image](https://hackmd.io/_uploads/SkFgXc1y1e.png)
+> client first byte increments

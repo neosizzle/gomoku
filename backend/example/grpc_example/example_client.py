@@ -13,7 +13,8 @@ def main():
 		p1_captures=0,
 		p0_captures=0,
 		num_turns=0,
-		is_end=False
+		is_end=False,
+		time_to_think_ns=0
 	)
 
 	print(meta)

@@ -27,24 +27,24 @@ ABSL_FLAG(uint16_t, port, 50051, "Server port for the service");
 class GameServiceImpl final : public Game::Service {
 	private:
 		bool _initialized;
-		int game_id;
+		int last_updated;
 		ModeType mode;
 		int grid_size;
 	Status GetGameMeta(ServerContext *context, const Empty* _empty, GameMeta* ret) override
 	{
 		ret->set__initialized(this->_initialized);
-		ret->set_gameid(this->game_id);
+		ret->set_last_updated(this->last_updated);
 		ret->set_mode(this->mode);
-		ret->set_gridsize(this->grid_size);
+		ret->set_grid_size(this->grid_size);
 		return Status::OK;
 	}
 
 	Status SetGameMeta(ServerContext *context, const GameMeta* meta, Empty* _empty) override
 	{
 		this->_initialized = meta->_initialized();
-		this->game_id = meta->gameid();
+		this->last_updated = meta->last_updated();
 		this->mode = meta->mode();
-		this->grid_size = meta->gridsize();
+		this->grid_size = meta->grid_size();
 
 		return Status::OK;
 	}
@@ -64,7 +64,7 @@ class GameServiceImpl final : public Game::Service {
 	}
 
 	public:
-		GameServiceImpl() : _initialized(false), game_id(0), mode(ModeType::PVP_PRO), grid_size(4) {}
+		GameServiceImpl() : _initialized(false), last_updated(0), mode(ModeType::PVP_PRO), grid_size(4) {}
 };
 
 void RunServer(uint16_t port) {

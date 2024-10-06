@@ -1,7 +1,8 @@
-// run the following command to generate the python classes
+// run the following command to generate the python classes <from example directory>
 // python -m grpc_tools.protoc -I../../../ --python_out=. --pyi_out=. --grpc_python_out=. ../../../game.proto
 
-// run the following commands to generate the CPP objects
+// run the following commands to generate the CPP objects <from example directory>
+// export PATH=export PATH=/home/nszl/42cursus/gomoku/frontend/grpc/bin:$PATH
 // protoc -I ../../../  --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` ../../../game.proto
 // protoc -I ../../../ --cpp_out=.  ../../../game.proto
 
@@ -26,9 +27,9 @@ message Empty {}
 
 message GameMeta {
 	bool _initialized = 1;
-	uint64 gameId = 2; // can be ommited, last_updated?
+	uint64 last_updated = 2;
 	ModeType mode = 3;
-	uint64 gridSize = 4;
+	uint64 grid_size = 4;
 }
 
 message GameState {
@@ -37,6 +38,5 @@ message GameState {
 	uint64 p0_captures = 3;
 	uint64 num_turns = 4;
 	bool is_end = 5;
-	
-	// include time to think
+	uint64 time_to_think_ns = 6;
 }
