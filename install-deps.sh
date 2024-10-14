@@ -27,6 +27,7 @@ if [ $distro == "Linux" ]; then
 	make -j 4
 	make install
 	export PATH="$PWD/bin:$PATH"
+	export PKG_CONFIG_PATH="$PWD/lib/pkgconfig:$PKG_CONFIG_PATH"
 	popd
 
 	# install SDL
