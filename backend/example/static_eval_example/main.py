@@ -13,122 +13,6 @@ def pretty_print_board(buffer, BOARD_SIZE):
 			print("")
 			counter = 0
 
-def get_top_idx(idx, BOARD_SIZE):
-	if idx < BOARD_SIZE:
-		return -1
-	return idx - BOARD_SIZE
-
-def get_btm_idx(idx, BOARD_SIZE):
-	dim = (BOARD_SIZE * BOARD_SIZE)
-	if idx >= (dim - BOARD_SIZE - 1):
-		return -1
-	return idx + BOARD_SIZE
-
-def get_left_idx(idx, BOARD_SIZE):
-	if (idx) % BOARD_SIZE == 0:
-		return -1
-	return idx - 1
-
-def get_right_idx(idx, BOARD_SIZE):
-	if (idx + 1) % BOARD_SIZE == 0:
-		return -1
-	return idx + 1
-
-def get_top_left_idx(idx, BOARD_SIZE):
-	top = get_top_idx(idx, BOARD_SIZE)
-	if top == -1:
-		return -1
-	return get_left_idx(top, BOARD_SIZE)
-
-def get_btm_left_idx(idx, BOARD_SIZE):
-	btm = get_btm_idx(idx, BOARD_SIZE)
-	if btm == -1:
-		return -1
-	return get_left_idx(btm, BOARD_SIZE)
-
-def get_top_right_idx(idx, BOARD_SIZE):
-	top = get_top_idx(idx, BOARD_SIZE)
-	if top == -1:
-		return -1
-	return get_right_idx(top, BOARD_SIZE)
-
-def get_btm_right_idx(idx, BOARD_SIZE):
-	btm = get_btm_idx(idx, BOARD_SIZE)
-	if btm == -1:
-		return -1
-	return get_right_idx(btm, BOARD_SIZE)
-
-def cell_scoring(board, idx, our_piece):
-	if board[idx] == our_piece:
-		return 1
-	return -1
-
-def flood_fill_score(BOARD_SIZE, board, score_matrix, idx, our_piece, curr_piece, traverse_cache):
-	# print(f"top {get_top_idx(idx, BOARD_SIZE)} btm {get_btm_idx(idx, BOARD_SIZE)} left {get_left_idx(idx, BOARD_SIZE)} right {get_right_idx(idx, BOARD_SIZE)}") # Tested OK
-	# print(f"topl {get_top_left_idx(idx, BOARD_SIZE)} btml {get_btm_left_idx(idx, BOARD_SIZE)} topr {get_top_right_idx(idx, BOARD_SIZE)} btmr {get_btm_right_idx(idx, BOARD_SIZE)}") # Tested OK
-
-	# if we have been here before or the current piece is not ours, return
-	if traverse_cache[idx] != 0 or board[idx] != curr_piece:
-		return
-
-	traverse_cache[idx] = 1
-
-	# traverse all directions
-	top_idx = get_top_idx(idx, BOARD_SIZE)
-	if top_idx != -1:
-		flood_fill_score(BOARD_SIZE, board, score_matrix, top_idx, our_piece, curr_piece, traverse_cache)
-
-	btm_idx = get_btm_idx(idx, BOARD_SIZE)
-	if btm_idx != -1:
-		flood_fill_score(BOARD_SIZE, board, score_matrix, btm_idx, our_piece, curr_piece, traverse_cache)
-
-	left_idx = get_left_idx(idx, BOARD_SIZE)
-	if left_idx != -1:
-		flood_fill_score(BOARD_SIZE, board, score_matrix, left_idx, our_piece, curr_piece, traverse_cache)
-
-	right_idx = get_right_idx(idx, BOARD_SIZE)
-	if right_idx != -1:
-		flood_fill_score(BOARD_SIZE, board, score_matrix, right_idx, our_piece, curr_piece, traverse_cache)
-
-	top_right_idx = get_top_right_idx(idx, BOARD_SIZE)
-	if top_right_idx != -1:
-		flood_fill_score(BOARD_SIZE, board, score_matrix, top_right_idx, our_piece, curr_piece, traverse_cache)
-
-	top_left_idx = get_top_left_idx(idx, BOARD_SIZE)
-	if top_left_idx != -1:
-		flood_fill_score(BOARD_SIZE, board, score_matrix, top_left_idx, our_piece, curr_piece, traverse_cache)
-
-	btm_right_idx = get_btm_right_idx(idx, BOARD_SIZE)
-	if btm_right_idx != -1:
-		flood_fill_score(BOARD_SIZE, board, score_matrix, btm_right_idx, our_piece, curr_piece, traverse_cache)
-
-	btm_left_idx = get_btm_left_idx(idx, BOARD_SIZE)
-	if btm_left_idx != -1:
-		flood_fill_score(BOARD_SIZE, board, score_matrix, btm_left_idx, our_piece, curr_piece, traverse_cache)
-
-	# scoring
-	score_matrix[idx] = cell_scoring(board, idx, our_piece)
-
-# we are maximizing for p1 here (piece 2)
-def static_eval_flood(BOARD_SIZE, game_state, our_piece):
-	dimension = (BOARD_SIZE * BOARD_SIZE)
-	score_matrix = [0] * dimension
-	board = game_state.board
-	
-	for i in range(dimension):
-		# current cell is empty or we have scored this cell before, skip
-		if board[i] == 0 or score_matrix[i] != 0:
-			continue
-		print(f"start fill @ idx {i}")
-		flood_fill_score(BOARD_SIZE, board, score_matrix, i, our_piece, board[i], [0] * dimension)
-
-
-	# TODO add captures to final score
-	pretty_print_board(game_state.board, BOARD_SIZE)
-	print("==========================")
-	pretty_print_board(score_matrix, BOARD_SIZE)
-	return sum(score_matrix)
-
 def extract_dimensional_cells(board, row_indices):
     direction_cells = []
     for row_index_set in row_indices:
@@ -233,6 +117,7 @@ def generate_diag_indices_inverse(board_size):
 	return diag_indices
 
 # we are maximizing for p1 here (piece 2)
+# TODO optimize this, can check win condition here and can also calculate enemy score
 def static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece):
 	dimension = (BOARD_SIZE * BOARD_SIZE)
 	board = game_state.board
@@ -276,11 +161,11 @@ def static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece):
 				
 				# Extract section
 				section = extraction[start_idx:end_idx]
-				print(f"{section}")
+				# print(f"{section}")
 
 				# count number of my pieces in section and append score
 				num_pieces_section = section.count(our_piece)
-				extraction_score += (num_pieces_section) * 2
+				extraction_score += (num_pieces_section) * (num_pieces_section)
 
 				# incur penalty on big gaps
 				penalty_end_idx = start_idx
@@ -315,15 +200,52 @@ def static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece):
 				# move start_idx to curr end_index
 				start_idx = end_idx
 			total_score += extraction_score
-		print(total_score)
+		# print(total_score)
 		score_res += total_score
 
+	return score_res
 
+def check_win_condition(BOARD_SIZE, game_state, our_piece, our_captures):
+	board = game_state.board
+	
+	if our_captures >= 5:
+		return True
+	
+	# generate indices for all directions
+	all_indices_directions = []
+	all_indices_directions.append(generate_row_indices(BOARD_SIZE))
+	all_indices_directions.append(generate_column_indices(BOARD_SIZE))
+	all_indices_directions.append(generate_diag_indices_inverse(BOARD_SIZE))
+	all_indices_directions.append(generate_diag_indices(BOARD_SIZE))
 
-	# TODO add captures to final score
+	for direction_indices in all_indices_directions:
+		# extract cells in  direction
+		direction_cells = extract_dimensional_cells(board, direction_indices)
+		
+		for extraction in direction_cells:
+			# count cumulative pieces
+			cum_count = 0
+			for cell in extraction:
+				if cell == our_piece:
+					cum_count += 1
+				else:
+					cum_count = 0
+				
+				if cum_count >= 5:
+					return True
+	
+	return False
+
+def static_eval(BOARD_SIZE, game_state, our_piece, enemy_piece, our_captures, enemy_captures):
+	final_score = static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece)
+	final_score += our_captures * 2
+
+	final_score -= static_eval_directional(BOARD_SIZE, game_state, enemy_piece, our_piece)
+	final_score -= enemy_captures * 2
+
 	pretty_print_board(game_state.board, BOARD_SIZE)
 	print("==========================")
-	return score_res
+	return final_score
 
 def main():
 	
@@ -331,12 +253,12 @@ def main():
 	BOARD_SIZE = 10
 
 	board = bytes([
-		1, 1, 1, 0, 0, 0, 0, 0, 0, 1,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 1, 0, 0, 0, 0, 0, 0, 0, 2,
+		0, 1, 0, 0, 0, 0, 0, 0, 2, 0,
+		0, 1, 0, 0, 0, 0, 0, 2, 0, 0,
+		0, 1, 0, 0, 0, 0, 2, 0, 0, 0,
 		0, 0, 0, 0, 0, 2, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+		0, 1, 0, 0, 2, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -352,8 +274,8 @@ def main():
 		time_to_think_ns=0
 	)
 
-	score = static_eval_directional(BOARD_SIZE, game_state, 1, 2)
+	score = static_eval(BOARD_SIZE, game_state, 1, 2, game_state.p1_captures, game_state.p0_captures)
 
-	print(f"score {score}")
+	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p0_captures)}")
 
 main()
