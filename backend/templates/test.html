@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gomoku Game</title>
+    <style>  
+        table {
+            border-collapse: collapse;
+            margin: 20px auto;
+        }
+
+        td {
+            width: 40px;  
+            height: 40px; 
+            border: 1px solid black;
+            text-align: center;
+            vertical-align: middle; 
+            padding: 0;  
+        }
+        .black-dot {
+            font-size: 36px;
+            color: black;
+        }
+
+        .white-dot {
+            font-size: 36px;
+            color: white;
+            text-shadow: 
+                -1px -1px 0 black,
+                1px -1px 0 black,
+                -1px 1px 0 black,
+                1px 1px 0 black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gomoku Game</h1>
+    <table id="board">
+        {% for y in range(19) %}
+        <tr>
+            {% for x in range(19) %}
+            <td data-x="{{ x }}" data-y="{{ y }}">
+                {% if board[y][x] == 0 %}
+                    &nbsp; 
+                {% elif board[y][x] == 1 %}
+                    <span class="black-dot">&#9679;</span>
+                {% elif board[y][x] == 2 %}
+                    <span class="white-dot">&#9675;</span>
+                {% endif %}
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>    
+    <script>
+        document.querySelectorAll('td').forEach(cell => {
+            cell.addEventListener('click', function() {
+                const x = this.getAttribute('data-x');
+                const y = this.getAttribute('data-y');
+
+                fetch('/move', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `x=${x}&y=${y}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status) { 
+                        updateGameBoard(); 
+                    } else {
+                        console.log("Invalid move or game over.");
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
+
+        function updateGameBoard() {
+            fetch('/board')
+                .then(response => response.json())
+                .then(data => {
+                    const board = data.board;
+                    const cells = document.querySelectorAll('#board td');
+                    cells.forEach(cell => {
+                        const x = parseInt(cell.getAttribute('data-x')); // 0-based index for x
+                        const y = parseInt(cell.getAttribute('data-y')); // 0-based index for y
+                        updateCell(cell, board[y][x]);
+                    });
+                })
+                .catch(error => console.error('Error fetching board:', error));
+        }
+
+        function updateCell(cell, value) {
+            if (value == 0) {
+                cell.innerHTML = '&nbsp;';
+            } else if (value == 1) {
+                cell.innerHTML = '<span class="black-dot">&#9679;</span>';
+            } else if (value == 2) {
+                cell.innerHTML = '<span class="white-dot">&#9675;</span>';
+            }
+        }
+    </script>
+</body>
+</html>
