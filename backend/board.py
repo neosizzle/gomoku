@@ -62,7 +62,7 @@ class GomokuGame(game_pb2_grpc.GameServicer):
         print(f"Received move: x={move_request.x}, y={move_request.y}")
         row = move_request.y
         col = move_request.x
-        if self.board[row][col] == 0:
+        if self.is_move_valid(row, col):
             self.board[row][col] = self.current_player
             self.num_turns += 1
             self.current_player = 2 if self.current_player == 1 else 1
@@ -70,6 +70,31 @@ class GomokuGame(game_pb2_grpc.GameServicer):
         else:
             print("Invalid move. Try again.")
         return BoolValue(value=False)
+
+    def is_move_valid(self, row, col):
+        if self.board[row][col] == 0:
+            if self.num_turns == 0:
+                return row == 9 and col == 9
+            return self.surrounding_check(row, col)
+        return False
+            
+    def surrounding_check(self, row, col):
+        surrounding_values = []
+
+        directions = [
+            (-1, -1), (-1, 0), (-1, 1),
+            (0, -1),          (0, 1),    
+            (1, -1), (1, 0), (1, 1)       
+        ]
+
+        for dr, dc in directions:
+            new_row, new_col = row + dr, col + dc
+
+            if 0 <= new_row < self.size and 0 <= new_col < self.size:
+                value = self.board[new_row][new_col]
+                if value == 1 or value == 2:
+                    return True
+        return False
 
     def is_game_over(self):
         return self.check_winner() or self.num_turns >= self.size * self.size

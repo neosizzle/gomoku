@@ -12,19 +12,54 @@
         td {
             width: 40px;  
             height: 40px; 
-            border: 1px solid black;
-            text-align: center;
-            vertical-align: middle; 
+            position: relative; /* Allow absolute positioning of child elements */
             padding: 0;  
+            border: none; /* Hide borders of the cells */
         }
+
+        /* Grid lines */
+        td::before, td::after {
+            content: "";
+            position: absolute;
+            background: black;
+        }
+
+        /* Horizontal line */
+        td::before {
+            width: 100%;
+            height: 2px;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+
+        /* Vertical line */
+        td::after {
+            width: 2px;
+            height: 100%;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+        }
+
         .black-dot {
             font-size: 36px;
             color: black;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; /* Prevent interaction */
         }
 
         .white-dot {
             font-size: 36px;
             color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; /* Prevent interaction */
             text-shadow: 
                 -1px -1px 0 black,
                 1px -1px 0 black,
