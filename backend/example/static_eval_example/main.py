@@ -236,6 +236,85 @@ def check_win_condition(BOARD_SIZE, game_state, our_piece, our_captures):
 	
 	return False
 
+# 
+def check_valid_win_combo(BOARD_SIZE, game_state):
+	board = game_state.board
+
+	# generate indices for all directions
+	all_indices_directions = []
+	all_indices_directions.append(generate_row_indices(BOARD_SIZE))
+	all_indices_directions.append(generate_column_indices(BOARD_SIZE))
+	all_indices_directions.append(generate_diag_indices_inverse(BOARD_SIZE))
+	all_indices_directions.append(generate_diag_indices(BOARD_SIZE))
+
+	for direction_indices in all_indices_directions:
+		# extract cells in  direction
+		direction_cells = extract_dimensional_cells(board, direction_indices)
+
+		# score each extraction
+		total_score = 0
+		
+		# iterate direction_cells with cell indices
+		for i in range(len(direction_cells)):
+			direction = direction_cells[i]
+			direction_idx = direction_indices[i]
+
+			cum_counter = 0
+			curr_piece = -1
+			cum_indices = []
+			for j in range(len(direction)):
+																						
+				extraction = direction[j]
+				extraction_idx = direction_idx[j]
+
+				# print(f"{extraction}, {extraction_idx}")
+
+				# not intrested in blank
+				if extraction == 0:
+					continue
+
+				# if extraction is curr_piece, we are still accumulating
+				if curr_piece == extraction:
+					cum_indices.append(extraction_idx)
+					cum_counter += 1
+
+				else:
+					cum_indices = [extraction_idx]
+					curr_piece = extraction
+					cum_counter = 0
+
+				# if we have 5 cumulative pieces, check for win
+				if cum_counter == 5:
+					# print(f"we have found winning combo {cum_indices}")
+					for cum_index in cum_indices:
+						print(board[cum_index])
+
+			# detect 5 in a row
+			# if detected, itearte all cells in the combo
+				# get the cell at the right. If its an ally, 
+				# get the cell to the allies right. If its an enemy,
+				# get the cell at the original cells left. If its an enemy, 
+				# return invalid win combo
+				# repeat for all directions
+				# return valid  win combo
+
+		# for extraction in direction_cells:
+		# 	# not intrested in blank
+		# 	if extraction == 0:
+		# 		continue
+
+		# 	# if extraction is curr_piece, we are still accumulating
+		# 	if curr_piece == extraction:
+		# 		cum_counter += 1
+		# 	else:
+		# 		curr_piece = extraction
+		# 		cum_counter = 0
+
+		# 	# if we have 5 cumulative pieces, check for win
+		# 	if cum_counter == 5:
+		# 		for winning_extraction in direction_cells:
+
+
 def static_eval(BOARD_SIZE, game_state, our_piece, enemy_piece, our_captures, enemy_captures):
 	final_score = static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece)
 	final_score += our_captures * 2
@@ -274,8 +353,10 @@ def main():
 		time_to_think_ns=0
 	)
 
-	score = static_eval(BOARD_SIZE, game_state, 1, 2, game_state.p1_captures, game_state.p0_captures)
+	check_valid_win_combo(BOARD_SIZE, game_state)
 
-	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p0_captures)}")
+	# score = static_eval(BOARD_SIZE, game_state, 1, 2, game_state.p1_captures, game_state.p0_captures)
+
+	# print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p0_captures)}")
 
 main()
