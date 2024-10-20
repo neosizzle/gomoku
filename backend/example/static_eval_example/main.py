@@ -13,6 +13,51 @@ def pretty_print_board(buffer, BOARD_SIZE):
 			print("")
 			counter = 0
 
+def get_top_idx(idx, BOARD_SIZE):
+	if idx < BOARD_SIZE:
+		return -1
+	return idx - BOARD_SIZE
+
+def get_btm_idx(idx, BOARD_SIZE):
+	dim = (BOARD_SIZE * BOARD_SIZE)
+	if idx >= (dim - BOARD_SIZE - 1):
+		return -1
+	return idx + BOARD_SIZE
+
+def get_left_idx(idx, BOARD_SIZE):
+	if (idx) % BOARD_SIZE == 0:
+		return -1
+	return idx - 1
+
+def get_right_idx(idx, BOARD_SIZE):
+	if (idx + 1) % BOARD_SIZE == 0:
+		return -1
+	return idx + 1
+
+def get_top_left_idx(idx, BOARD_SIZE):
+	top = get_top_idx(idx, BOARD_SIZE)
+	if top == -1:
+		return -1
+	return get_left_idx(top, BOARD_SIZE)
+
+def get_btm_left_idx(idx, BOARD_SIZE):
+	btm = get_btm_idx(idx, BOARD_SIZE)
+	if btm == -1:
+		return -1
+	return get_left_idx(btm, BOARD_SIZE)
+
+def get_top_right_idx(idx, BOARD_SIZE):
+	top = get_top_idx(idx, BOARD_SIZE)
+	if top == -1:
+		return -1
+	return get_right_idx(top, BOARD_SIZE)
+
+def get_btm_right_idx(idx, BOARD_SIZE):
+	btm = get_btm_idx(idx, BOARD_SIZE)
+	if btm == -1:
+		return -1
+	return get_right_idx(btm, BOARD_SIZE)
+
 def extract_dimensional_cells(board, row_indices):
     direction_cells = []
     for row_index_set in row_indices:
@@ -205,6 +250,23 @@ def static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece):
 
 	return score_res
 
+# Assumes 0 is a blank piece
+def validate_nocap_direction(direction_fn,anti_direction_fn, idx, board_size, curr_piece, board):
+	# gets cell at direction_fn, if its curr_piece
+	check_cell_idx = direction_fn(idx, board_size)
+	check_cell = board[check_cell_idx]
+	if check_cell == curr_piece:
+		# get cell to the new pieces direction_fn. if its enemy, 
+		check_neigh_cell = board[direction_fn(check_cell_idx, board_size)]
+		if check_neigh_cell != curr_piece and check_neigh_cell != 0:
+			# get cell to the original cells anti_direction_fn
+			anti_direct_cell = board[anti_direction_fn(idx, board_size)]
+			if anti_direct_cell != curr_piece and anti_direct_cell != 0:
+				return False
+	return True
+
+	# print(f"res {direction_fn(idx, board_size)}")
+
 def check_win_condition(BOARD_SIZE, game_state, our_piece, our_captures):
 	board = game_state.board
 	
@@ -269,15 +331,22 @@ def check_valid_win_combo(BOARD_SIZE, game_state):
 
 				# print(f"{extraction}, {extraction_idx}")
 
-				# not intrested in blank
+				# not intrested in blank, however if we have a curr_piece already, we need to reset
 				if extraction == 0:
+					if curr_piece != -1:
+						curr_piece == -1
+						cum_indices = []
+						cum_counter = 0
 					continue
-
+				
+				if curr_piece == -1:
+					# print(f"cp will bcome {extraction}")
+					curr_piece = extraction
 				# if extraction is curr_piece, we are still accumulating
 				if curr_piece == extraction:
 					cum_indices.append(extraction_idx)
 					cum_counter += 1
-
+					# print(f"cum counter is now {cum_counter}")
 				else:
 					cum_indices = [extraction_idx]
 					curr_piece = extraction
@@ -286,33 +355,17 @@ def check_valid_win_combo(BOARD_SIZE, game_state):
 				# if we have 5 cumulative pieces, check for win
 				if cum_counter == 5:
 					# print(f"we have found winning combo {cum_indices}")
+					endgame_cap_validation_res = []
 					for cum_index in cum_indices:
-						print(board[cum_index])
-
-			# detect 5 in a row
-			# if detected, itearte all cells in the combo
-				# get the cell at the right. If its an ally, 
-				# get the cell to the allies right. If its an enemy,
-				# get the cell at the original cells left. If its an enemy, 
-				# return invalid win combo
-				# repeat for all directions
-				# return valid  win combo
-
-		# for extraction in direction_cells:
-		# 	# not intrested in blank
-		# 	if extraction == 0:
-		# 		continue
-
-		# 	# if extraction is curr_piece, we are still accumulating
-		# 	if curr_piece == extraction:
-		# 		cum_counter += 1
-		# 	else:
-		# 		curr_piece = extraction
-		# 		cum_counter = 0
-
-		# 	# if we have 5 cumulative pieces, check for win
-		# 	if cum_counter == 5:
-		# 		for winning_extraction in direction_cells:
+						endgame_cap_validation_res.append(validate_nocap_direction(get_btm_idx, get_top_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(get_top_idx, get_btm_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(get_left_idx, get_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(get_right_idx, get_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(get_btm_left_idx, get_top_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(get_top_right_idx, get_btm_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(get_top_left_idx, get_btm_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(get_btm_right_idx, get_top_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+					print(endgame_cap_validation_res.count(False) == 0)
 
 
 def static_eval(BOARD_SIZE, game_state, our_piece, enemy_piece, our_captures, enemy_captures):
@@ -333,12 +386,12 @@ def main():
 
 	board = bytes([
 		0, 1, 0, 0, 0, 0, 0, 0, 0, 2,
-		0, 1, 0, 0, 0, 0, 0, 0, 2, 0,
-		0, 1, 0, 0, 0, 0, 0, 2, 0, 0,
-		0, 1, 0, 0, 0, 0, 2, 0, 0, 0,
-		0, 0, 0, 0, 0, 2, 0, 0, 0, 0,
-		0, 1, 0, 0, 2, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 1, 0, 0, 0, 0, 1, 0, 2, 0,
+		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 1, 0, 0, 0, 1, 2, 0, 2, 0,
+		0, 0, 0, 0, 2, 2, 0, 0, 0, 1,
+		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
