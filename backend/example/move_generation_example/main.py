@@ -25,14 +25,87 @@ def pretty_print_board(buffer, BOARD_SIZE):
 			print("")
 			counter = 0
 
-# TODO generate a tree of moves and store that using adjacency list
+def get_top_idx(idx, BOARD_SIZE):
+	if idx < BOARD_SIZE:
+		return -1
+	return idx - BOARD_SIZE
+
+def get_btm_idx(idx, BOARD_SIZE):
+	dim = (BOARD_SIZE * BOARD_SIZE)
+	if idx >= (dim - BOARD_SIZE - 1):
+		return -1
+	return idx + BOARD_SIZE
+
+def get_left_idx(idx, BOARD_SIZE):
+	if (idx) % BOARD_SIZE == 0:
+		return -1
+	return idx - 1
+
+def get_right_idx(idx, BOARD_SIZE):
+	if (idx + 1) % BOARD_SIZE == 0:
+		return -1
+	return idx + 1
+
+def get_top_left_idx(idx, BOARD_SIZE):
+	top = get_top_idx(idx, BOARD_SIZE)
+	if top == -1:
+		return -1
+	return get_left_idx(top, BOARD_SIZE)
+
+def get_btm_left_idx(idx, BOARD_SIZE):
+	btm = get_btm_idx(idx, BOARD_SIZE)
+	if btm == -1:
+		return -1
+	return get_left_idx(btm, BOARD_SIZE)
+
+def get_top_right_idx(idx, BOARD_SIZE):
+	top = get_top_idx(idx, BOARD_SIZE)
+	if top == -1:
+		return -1
+	return get_right_idx(top, BOARD_SIZE)
+
+def get_btm_right_idx(idx, BOARD_SIZE):
+	btm = get_btm_idx(idx, BOARD_SIZE)
+	if btm == -1:
+		return -1
+	return get_right_idx(btm, BOARD_SIZE)
+
+def expand_all_directions(idx: int, depth: int, BOARD_SIZE: int):
+	res = []
+	dir_fns = [get_top_idx, get_btm_idx, get_left_idx, get_right_idx, get_top_left_idx, get_top_right_idx, get_btm_left_idx, get_btm_right_idx]
+	for dir in dir_fns:
+		last_dir_res = idx
+		for i in range(depth):
+			new_dir_res = dir(last_dir_res, BOARD_SIZE)
+			if new_dir_res == -1:
+				break
+			res.append(new_dir_res)
+			last_dir_res = new_dir_res
+	return res
+
+# generates a list of next states based on the initial state given 
 def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: int) -> list[game_pb2.GameState]:
 	curr_board = state.board
 	dims = BOARD_SIZE * BOARD_SIZE
 	res = []
+	indices_to_check = set() # set for no dupes
+
+	# we only select cells to fill if they are already near a piece
+	for i in range(dims):
+		# indices_to_check.add(i)
+		# ignore cells which are blank
+		if curr_board[i] == 0:
+			continue
+		
+		# get all indices from all directions within a 2 depth range
+		directional_indices = expand_all_directions(i, 2, BOARD_SIZE)
+		for val in directional_indices:
+			indices_to_check.add(val)
+
+	# remove duplicates and invalid values 
 
 	# iterate through all cells in dimensions
-	for i in range(dims):
+	for i in indices_to_check:
 		# ignore cells which are occupied
 		if curr_board[i] != 0:
 			continue
@@ -132,7 +205,7 @@ def main():
 		time_to_think_ns=0
 	)
 
-	move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 3)
+	move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 2)
 	print(f"{len(move_tree)}")
 	# for node in move_tree:
 	# 	pretty_print_board(node[0].board, BOARD_SIZE)
