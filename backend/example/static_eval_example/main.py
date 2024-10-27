@@ -385,16 +385,16 @@ def main():
 	BOARD_SIZE = 10
 
 	board = bytes([
-		0, 1, 0, 0, 0, 0, 0, 0, 0, 2,
-		0, 1, 0, 0, 0, 0, 1, 0, 2, 0,
 		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 1, 0, 0, 0, 1, 2, 0, 2, 0,
-		0, 0, 0, 0, 2, 2, 0, 0, 0, 1,
 		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
 	]
 	)
 	game_state = game_pb2.GameState(
@@ -406,10 +406,10 @@ def main():
 		time_to_think_ns=0
 	)
 
-	check_valid_win_combo(BOARD_SIZE, game_state)
+	# check_valid_win_combo(BOARD_SIZE, game_state)
 
-	# score = static_eval(BOARD_SIZE, game_state, 1, 2, game_state.p1_captures, game_state.p0_captures)
+	score = static_eval(BOARD_SIZE, game_state, 1, 2, game_state.p1_captures, game_state.p0_captures)
 
-	# print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p0_captures)}")
+	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p0_captures)}")
 
 main()

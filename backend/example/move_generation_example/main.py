@@ -205,7 +205,7 @@ def main():
 		time_to_think_ns=0
 	)
 
-	move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 2)
+	move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 3)
 	print(f"{len(move_tree)}")
 	# for node in move_tree:
 	# 	pretty_print_board(node[0].board, BOARD_SIZE)
