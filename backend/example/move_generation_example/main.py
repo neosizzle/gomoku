@@ -3,8 +3,8 @@ import time
 
 import game_pb2_grpc
 import game_pb2
+import static_eval
 
-import time
 def measure_duration_ns(func):
     """Decorator to measure the duration of a function in nanoseconds."""
     def wrapper(*args, **kwargs):
@@ -83,6 +83,101 @@ def expand_all_directions(idx: int, depth: int, BOARD_SIZE: int):
 			last_dir_res = new_dir_res
 	return res
 
+# returns true if a capture is possible by me if i place curr_piece in idx
+# the opposite of validate_nocap_direction
+def check_capture_made_dir(direction_fn, idx, board_size, curr_piece, board):
+	check_cell_idx = direction_fn(idx, board_size)
+	check_cell = board[check_cell_idx]
+	# gets cell at direction_fn, if its enemy
+	if check_cell > 0 and check_cell != curr_piece:
+		# gets cell at direction_fn again
+		check_cell_idx = direction_fn(check_cell_idx, board_size)
+		check_cell = board[check_cell_idx]
+		# if its still enemy
+		if check_cell > 0 and check_cell != curr_piece:
+			# gets cell at direction_fn again
+			check_cell_idx = direction_fn(check_cell_idx, board_size)
+			check_cell = board[check_cell_idx]
+			# if its ally
+			if check_cell == curr_piece:
+				return True
+	return False
+
+# This function will simulate the effect of placing a piece on the board, and it would return None if such 
+# a placmenet is invalid / impossible
+def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.GameState:
+	board = state.board
+
+	# validate if board index is empty 
+	if board[index] != 0:
+		return None
+	
+	# validate if placing this piece violates double free three rule
+
+	# validate if placing such a piece will capture opponenet
+	
+	# validate if placing such a piece will get myself captured
+	captured_validation_res = []
+	fn_mappings = [
+		(0, get_btm_idx, get_top_idx),
+		(1, get_top_idx, get_btm_idx),
+		(2, get_left_idx, get_right_idx),
+		(3, get_right_idx, get_left_idx),
+		(4, get_btm_left_idx, get_top_right_idx),
+		(5, get_top_right_idx, get_btm_left_idx),
+		(6, get_top_left_idx, get_btm_right_idx),
+		(7, get_btm_right_idx, get_top_left_idx)
+	]
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[0][1], fn_mappings[0][2], index, BOARD_SIZE, board[index], board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[1][1], fn_mappings[1][2], index, BOARD_SIZE, board[index], board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[2][1], fn_mappings[2][2], index, BOARD_SIZE, board[index], board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[3][1], fn_mappings[3][2], index, BOARD_SIZE, board[index], board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[4][1], fn_mappings[4][2], index, BOARD_SIZE, board[index], board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[5][1], fn_mappings[5][2], index, BOARD_SIZE, board[index], board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[6][1], fn_mappings[6][2], index, BOARD_SIZE, board[index], board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[7][1], fn_mappings[7][2], index, BOARD_SIZE, board[index], board))
+
+	try:
+		we_got_captured_idx = captured_validation_res.index(False)
+		
+		# determine the direction of capture
+		fn_mapping = fn_mappings[we_got_captured_idx]
+
+		# turn neighbour cell into blank and increase capture 
+		new_board = bytearray(board[:])
+		new_board[fn_mapping[1]] = 0
+		new_board = bytes(new_board)
+
+		new_p1_captures = state.p1_captures if piece == 2 else state.p1_captures + 1
+		new_p2_captures = state.p2_captures if piece == 1 else state.p2_captures + 1
+		game_state = game_pb2.GameState(
+			board=new_board,
+			p1_captures=new_p1_captures,
+			p2_captures=new_p2_captures,
+			num_turns=state.num_turns + 1,
+			is_end=1 if new_p1_captures >= 5 else 2 if new_p2_captures >= 5 else 0,
+			time_to_think_ns=0
+		)
+		return game_state
+	except:
+		pass
+	
+	new_board = bytearray(board[:])
+	# place piece in empty space, TODO check for capture and win and heuristics
+	new_board[index] = piece
+	new_board = bytes(new_board)
+
+	game_state = game_pb2.GameState(
+		board=new_board,
+		p1_captures=state.p1_captures,
+		p2_captures=state.p2_captures,
+		num_turns=state.num_turns + 1,
+		is_end=False,
+		time_to_think_ns=0
+	)
+
+	return game_state
+
 # generates a list of next states based on the initial state given 
 def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: int) -> list[game_pb2.GameState]:
 	curr_board = state.board
@@ -102,8 +197,6 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 		for val in directional_indices:
 			indices_to_check.add(val)
 
-	# remove duplicates and invalid values 
-
 	# iterate through all cells in dimensions
 	for i in indices_to_check:
 		# ignore cells which are occupied
@@ -119,7 +212,7 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 		game_state = game_pb2.GameState(
 			board=new_board,
 			p1_captures=state.p1_captures,
-			p0_captures=state.p0_captures,
+			p2_captures=state.p2_captures,
 			num_turns=state.num_turns + 1,
 			is_end=False,
 			time_to_think_ns=0
@@ -167,46 +260,60 @@ def generate_move_tree(state: game_pb2.GameState, BOARD_SIZE: int, piece: int, d
 def main():
 	
 	# some metadata here
-	BOARD_SIZE = 19
+	# BOARD_SIZE = 19
+
+	# board = bytes([
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	# ]
+	# )
+
+	BOARD_SIZE = 9
 
 	board = bytes([
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	]
-	)
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 2, 0, 0,
+		0, 0, 0, 0, 0, 0, 2, 0, 1,
+		0, 0, 0, 0, 0, 0, 2, 0, 0,
+		0, 0, 0, 0, 0, 0, 2, 0, 0,
+		0, 0, 0, 0, 0, 2, 1, 1, 1,
+		0, 0, 0, 0, 0, 0, 0, 0, 0
+	])
 
-	# BOARD_SIZE = 9
-
-	# board = board = bytes([0] * 81)
-	# p0 is 0, p1 is 2
+	# p1 is 1, p2 is 2
 	game_state = game_pb2.GameState(
 		board=board,
 		p1_captures=0,
-		p0_captures=0,
+		p2_captures=0,
 		num_turns=0,
 		is_end=False,
 		time_to_think_ns=0
 	)
 
-	move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 3)
-	print(f"{len(move_tree)}")
+	# TODO test move generation example
+
+	# move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 3)
+	# print(f"{len(move_tree)}")
+	
 	# for node in move_tree:
 	# 	pretty_print_board(node[0].board, BOARD_SIZE)
 	# 	print("")
