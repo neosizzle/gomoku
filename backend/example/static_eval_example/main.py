@@ -252,9 +252,9 @@ def static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece):
 
 # Assumes 0 is a blank piece
 def validate_nocap_direction(direction_fn,anti_direction_fn, idx, board_size, curr_piece, board):
-	# gets cell at direction_fn, if its curr_piece
 	check_cell_idx = direction_fn(idx, board_size)
 	check_cell = board[check_cell_idx]
+	# gets cell at direction_fn, if its curr_piece
 	if check_cell == curr_piece:
 		# get cell to the new pieces direction_fn. if its enemy, 
 		check_neigh_cell = board[direction_fn(check_cell_idx, board_size)]

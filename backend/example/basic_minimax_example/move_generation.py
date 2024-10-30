@@ -48,8 +48,6 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 		for val in directional_indices:
 			indices_to_check.add(val)
 
-	# remove duplicates and invalid values 
-
 	# iterate through all cells in dimensions
 	for i in indices_to_check:
 		# ignore cells which are occupied
