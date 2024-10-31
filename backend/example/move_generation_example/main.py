@@ -115,7 +115,87 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.Game
 	# validate if placing this piece violates double free three rule
 
 	# validate if placing such a piece will capture opponenet
-	
+	captured_validation_res = []
+	fn_mappings = [
+		(0, get_btm_idx),
+		(1, get_top_idx),
+		(2, get_left_idx),
+		(3, get_right_idx),
+		(4, get_btm_left_idx),
+		(5, get_top_right_idx),
+		(6, get_top_left_idx),
+		(7, get_btm_right_idx)
+	]
+	captured_validation_res.append(check_capture_made_dir(fn_mappings[0][1], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(check_capture_made_dir(fn_mappings[1][1], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(check_capture_made_dir(fn_mappings[2][1], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(check_capture_made_dir(fn_mappings[3][1], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(check_capture_made_dir(fn_mappings[4][1], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(check_capture_made_dir(fn_mappings[5][1], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(check_capture_made_dir(fn_mappings[6][1], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(check_capture_made_dir(fn_mappings[7][1], index, BOARD_SIZE, piece, board))
+	we_captured_indices = []
+	for (idx, elem) in enumerate(captured_validation_res):
+		if elem is True:
+			we_captured_indices.append(idx)
+	if len(we_captured_indices) > 0:
+		new_board = bytearray(board[:])
+		new_board[index] = piece
+		new_p1_captures = state.p1_captures
+		new_p2_captures = state.p2_captures
+		for we_captured_idx in we_captured_indices:
+			# determine the direction of capture
+			fn_mapping = fn_mappings[we_captured_idx]
+
+			# turn neighbour cell into blank, fill curr blank and increase capture
+			idx1 = fn_mapping[1](index, BOARD_SIZE)
+			idx2 = fn_mapping[1](idx1, BOARD_SIZE)
+			new_board[idx1] = 0
+			new_board[idx2] = 0
+			new_p1_captures = new_p1_captures + 1 if piece == 1 else new_p1_captures
+			new_p2_captures = new_p2_captures + 1 if piece == 2 else new_p2_captures
+		
+		new_board = bytes(new_board)
+		game_state = game_pb2.GameState(
+			board=new_board,
+			p1_captures=new_p1_captures,
+			p2_captures=new_p2_captures,
+			num_turns=state.num_turns + 1,
+			is_end=1 if new_p1_captures >= 5 else 2 if new_p2_captures >= 5 else 0,
+			time_to_think_ns=0
+		)
+		return game_state
+
+	# try:
+		
+		
+	# 	we_captured_idx = captured_validation_res.index(True)
+	# 	# determine the direction of capture
+	# 	fn_mapping = fn_mappings[we_captured_idx]
+
+	# 	# turn neighbour cell into blank, fill curr blank and increase capture
+	# 	new_board = bytearray(board[:])
+	# 	new_board[index] = piece
+	# 	idx1 = fn_mapping[1](index, BOARD_SIZE)
+	# 	idx2 = fn_mapping[1](idx1, BOARD_SIZE)
+	# 	new_board[idx1] = 0
+	# 	new_board[idx2] = 0
+	# 	new_board = bytes(new_board)
+
+	# 	new_p1_captures = state.p1_captures + 1 if piece == 1 else state.p1_captures
+	# 	new_p2_captures = state.p2_captures + 1 if piece == 2 else state.p2_captures
+	# 	game_state = game_pb2.GameState(
+	# 		board=new_board,
+	# 		p1_captures=new_p1_captures,
+	# 		p2_captures=new_p2_captures,
+	# 		num_turns=state.num_turns + 1,
+	# 		is_end=1 if new_p1_captures >= 5 else 2 if new_p2_captures >= 5 else 0,
+	# 		time_to_think_ns=0
+	# 	)
+	# 	return game_state
+	# except:
+	# 	pass
+
 	# validate if placing such a piece will get myself captured
 	captured_validation_res = []
 	fn_mappings = [
@@ -128,15 +208,14 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.Game
 		(6, get_top_left_idx, get_btm_right_idx),
 		(7, get_btm_right_idx, get_top_left_idx)
 	]
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[0][1], fn_mappings[0][2], index, BOARD_SIZE, board[index], board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[1][1], fn_mappings[1][2], index, BOARD_SIZE, board[index], board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[2][1], fn_mappings[2][2], index, BOARD_SIZE, board[index], board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[3][1], fn_mappings[3][2], index, BOARD_SIZE, board[index], board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[4][1], fn_mappings[4][2], index, BOARD_SIZE, board[index], board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[5][1], fn_mappings[5][2], index, BOARD_SIZE, board[index], board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[6][1], fn_mappings[6][2], index, BOARD_SIZE, board[index], board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[7][1], fn_mappings[7][2], index, BOARD_SIZE, board[index], board))
-
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[0][1], fn_mappings[0][2], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[1][1], fn_mappings[1][2], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[2][1], fn_mappings[2][2], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[3][1], fn_mappings[3][2], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[4][1], fn_mappings[4][2], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[5][1], fn_mappings[5][2], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[6][1], fn_mappings[6][2], index, BOARD_SIZE, piece, board))
+	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[7][1], fn_mappings[7][2], index, BOARD_SIZE, piece, board))
 	try:
 		we_got_captured_idx = captured_validation_res.index(False)
 		
@@ -145,7 +224,7 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.Game
 
 		# turn neighbour cell into blank and increase capture 
 		new_board = bytearray(board[:])
-		new_board[fn_mapping[1]] = 0
+		new_board[fn_mapping[1](index, BOARD_SIZE)] = 0
 		new_board = bytes(new_board)
 
 		new_p1_captures = state.p1_captures if piece == 2 else state.p1_captures + 1
@@ -291,11 +370,11 @@ def main():
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 1, 1, 0, 0, 0, 2, 0, 0,
+		0, 1, 0, 1, 0, 0, 2, 0, 1,
+		0, 2, 0, 0, 2, 0, 2, 0, 0,
 		0, 0, 0, 0, 0, 0, 2, 0, 0,
-		0, 0, 0, 0, 0, 0, 2, 0, 1,
-		0, 0, 0, 0, 0, 0, 2, 0, 0,
-		0, 0, 0, 0, 0, 0, 2, 0, 0,
-		0, 0, 0, 0, 0, 2, 1, 1, 1,
+		0, 0, 0, 0, 0, 0, 1, 0, 2,
 		0, 0, 0, 0, 0, 0, 0, 0, 0
 	])
 
@@ -309,7 +388,14 @@ def main():
 		time_to_think_ns=0
 	)
 
-	# TODO test move generation example
+	# TODO check simultaneous captures example
+	# print(static_eval.validate_nocap_direction(get_left_idx, get_right_idx, 70, BOARD_SIZE, 1, board))
+	new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
+	if new_state is None:
+		print("new state is none")
+	else:
+		pretty_print_board(new_state.board, BOARD_SIZE)
+		print(f"{new_state}")
 
 	# move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 3)
 	# print(f"{len(move_tree)}")
