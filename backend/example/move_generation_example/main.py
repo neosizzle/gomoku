@@ -75,12 +75,14 @@ def expand_all_directions(idx: int, depth: int, BOARD_SIZE: int):
 	dir_fns = [get_top_idx, get_btm_idx, get_left_idx, get_right_idx, get_top_left_idx, get_top_right_idx, get_btm_left_idx, get_btm_right_idx]
 	for dir in dir_fns:
 		last_dir_res = idx
+		curr = []
 		for i in range(depth):
 			new_dir_res = dir(last_dir_res, BOARD_SIZE)
 			if new_dir_res == -1:
 				break
-			res.append(new_dir_res)
+			curr.append(new_dir_res)
 			last_dir_res = new_dir_res
+		res.append(curr)
 	return res
 
 # returns true if a capture is possible by me if i place curr_piece in idx
@@ -166,36 +168,6 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.Game
 		)
 		return game_state
 
-	# try:
-		
-		
-	# 	we_captured_idx = captured_validation_res.index(True)
-	# 	# determine the direction of capture
-	# 	fn_mapping = fn_mappings[we_captured_idx]
-
-	# 	# turn neighbour cell into blank, fill curr blank and increase capture
-	# 	new_board = bytearray(board[:])
-	# 	new_board[index] = piece
-	# 	idx1 = fn_mapping[1](index, BOARD_SIZE)
-	# 	idx2 = fn_mapping[1](idx1, BOARD_SIZE)
-	# 	new_board[idx1] = 0
-	# 	new_board[idx2] = 0
-	# 	new_board = bytes(new_board)
-
-	# 	new_p1_captures = state.p1_captures + 1 if piece == 1 else state.p1_captures
-	# 	new_p2_captures = state.p2_captures + 1 if piece == 2 else state.p2_captures
-	# 	game_state = game_pb2.GameState(
-	# 		board=new_board,
-	# 		p1_captures=new_p1_captures,
-	# 		p2_captures=new_p2_captures,
-	# 		num_turns=state.num_turns + 1,
-	# 		is_end=1 if new_p1_captures >= 5 else 2 if new_p2_captures >= 5 else 0,
-	# 		time_to_think_ns=0
-	# 	)
-	# 	return game_state
-	# except:
-	# 	pass
-
 	# validate if placing such a piece will get myself captured
 	captured_validation_res = []
 	fn_mappings = [
@@ -272,7 +244,7 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 			continue
 		
 		# get all indices from all directions within a 2 depth range
-		directional_indices = expand_all_directions(i, 2, BOARD_SIZE)
+		directional_indices = sum(expand_all_directions(i, 2, BOARD_SIZE), []) # combine list results
 		for val in directional_indices:
 			indices_to_check.add(val)
 
@@ -388,14 +360,13 @@ def main():
 		time_to_think_ns=0
 	)
 
-	# TODO check simultaneous captures example
-	# print(static_eval.validate_nocap_direction(get_left_idx, get_right_idx, 70, BOARD_SIZE, 1, board))
-	new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
-	if new_state is None:
-		print("new state is none")
-	else:
-		pretty_print_board(new_state.board, BOARD_SIZE)
-		print(f"{new_state}")
+	print(expand_all_directions(0, BOARD_SIZE, BOARD_SIZE))
+	# new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
+	# if new_state is None:
+	# 	print("new state is none")
+	# else:
+	# 	pretty_print_board(new_state.board, BOARD_SIZE)
+	# 	print(f"{new_state}")
 
 	# move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 3)
 	# print(f"{len(move_tree)}")
