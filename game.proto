@@ -43,7 +43,7 @@ message GameMeta {
 message GameState {
 	bytes board = 1;
 	uint64 p1_captures = 2;
-	uint64 p0_captures = 3;
+	uint64 p2_captures = 3;
 	uint64 num_turns = 4;
 	bool is_end = 5;
 	uint64 time_to_think_ns = 6;

@@ -3,60 +3,7 @@ import time
 
 import game_pb2_grpc
 import game_pb2
-
-def pretty_print_board(buffer, BOARD_SIZE):
-	counter = 0
-	for byte in buffer:
-		print(f" {int(byte)} ", end='')
-		counter += 1
-		if counter == BOARD_SIZE:
-			print("")
-			counter = 0
-
-def get_top_idx(idx, BOARD_SIZE):
-	if idx < BOARD_SIZE:
-		return -1
-	return idx - BOARD_SIZE
-
-def get_btm_idx(idx, BOARD_SIZE):
-	dim = (BOARD_SIZE * BOARD_SIZE)
-	if idx >= (dim - BOARD_SIZE - 1):
-		return -1
-	return idx + BOARD_SIZE
-
-def get_left_idx(idx, BOARD_SIZE):
-	if (idx) % BOARD_SIZE == 0:
-		return -1
-	return idx - 1
-
-def get_right_idx(idx, BOARD_SIZE):
-	if (idx + 1) % BOARD_SIZE == 0:
-		return -1
-	return idx + 1
-
-def get_top_left_idx(idx, BOARD_SIZE):
-	top = get_top_idx(idx, BOARD_SIZE)
-	if top == -1:
-		return -1
-	return get_left_idx(top, BOARD_SIZE)
-
-def get_btm_left_idx(idx, BOARD_SIZE):
-	btm = get_btm_idx(idx, BOARD_SIZE)
-	if btm == -1:
-		return -1
-	return get_left_idx(btm, BOARD_SIZE)
-
-def get_top_right_idx(idx, BOARD_SIZE):
-	top = get_top_idx(idx, BOARD_SIZE)
-	if top == -1:
-		return -1
-	return get_right_idx(top, BOARD_SIZE)
-
-def get_btm_right_idx(idx, BOARD_SIZE):
-	btm = get_btm_idx(idx, BOARD_SIZE)
-	if btm == -1:
-		return -1
-	return get_right_idx(btm, BOARD_SIZE)
+import utils
 
 def extract_dimensional_cells(board, row_indices):
     direction_cells = []
@@ -250,17 +197,24 @@ def static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece):
 
 	return score_res
 
-# Assumes 0 is a blank piece
+# Assumes 0 is a blank piece and
+# returns true if i get captured if i place curr_piece in idx
 def validate_nocap_direction(direction_fn,anti_direction_fn, idx, board_size, curr_piece, board):
 	check_cell_idx = direction_fn(idx, board_size)
 	check_cell = board[check_cell_idx]
 	# gets cell at direction_fn, if its curr_piece
 	if check_cell == curr_piece:
+		neigh_cell_idx = direction_fn(check_cell_idx, board_size)
+		if neigh_cell_idx == -1:
+			return True
 		# get cell to the new pieces direction_fn. if its enemy, 
-		check_neigh_cell = board[direction_fn(check_cell_idx, board_size)]
+		check_neigh_cell = board[neigh_cell_idx]
 		if check_neigh_cell != curr_piece and check_neigh_cell != 0:
+			anti_direct_cell_idx = anti_direction_fn(idx, board_size)
+			if anti_direct_cell_idx == -1:
+				return True
 			# get cell to the original cells anti_direction_fn
-			anti_direct_cell = board[anti_direction_fn(idx, board_size)]
+			anti_direct_cell = board[anti_direct_cell_idx]
 			if anti_direct_cell != curr_piece and anti_direct_cell != 0:
 				return False
 	return True
@@ -357,14 +311,14 @@ def check_valid_win_combo(BOARD_SIZE, game_state):
 					# print(f"we have found winning combo {cum_indices}")
 					endgame_cap_validation_res = []
 					for cum_index in cum_indices:
-						endgame_cap_validation_res.append(validate_nocap_direction(get_btm_idx, get_top_idx, cum_index, BOARD_SIZE, board[cum_index], board))
-						endgame_cap_validation_res.append(validate_nocap_direction(get_top_idx, get_btm_idx, cum_index, BOARD_SIZE, board[cum_index], board))
-						endgame_cap_validation_res.append(validate_nocap_direction(get_left_idx, get_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
-						endgame_cap_validation_res.append(validate_nocap_direction(get_right_idx, get_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
-						endgame_cap_validation_res.append(validate_nocap_direction(get_btm_left_idx, get_top_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
-						endgame_cap_validation_res.append(validate_nocap_direction(get_top_right_idx, get_btm_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
-						endgame_cap_validation_res.append(validate_nocap_direction(get_top_left_idx, get_btm_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
-						endgame_cap_validation_res.append(validate_nocap_direction(get_btm_right_idx, get_top_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(utils.get_btm_idx, utils.get_top_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(utils.get_top_idx, utils.get_btm_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(utils.get_left_idx, utils.get_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(utils.get_right_idx, utils.get_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(utils.get_btm_left_idx, utils.get_top_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(utils.get_top_right_idx, utils.get_btm_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(utils.get_top_left_idx, utils.get_btm_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+						endgame_cap_validation_res.append(validate_nocap_direction(utils.get_btm_right_idx, utils.get_top_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
 					print(endgame_cap_validation_res.count(False) == 0)
 
 
@@ -375,8 +329,8 @@ def static_eval(BOARD_SIZE, game_state, our_piece, enemy_piece, our_captures, en
 	final_score -= static_eval_directional(BOARD_SIZE, game_state, enemy_piece, our_piece)
 	final_score -= enemy_captures * 2
 
-	pretty_print_board(game_state.board, BOARD_SIZE)
-	print("==========================")
+	# utils.pretty_print_board(game_state.board, BOARD_SIZE)
+	# print("==========================")
 	return final_score
 
 def main():
@@ -400,7 +354,7 @@ def main():
 	game_state = game_pb2.GameState(
 		board=board,
 		p1_captures=0,
-		p0_captures=0,
+		p2_captures=0,
 		num_turns=0,
 		is_end=False,
 		time_to_think_ns=0
@@ -408,8 +362,6 @@ def main():
 
 	# check_valid_win_combo(BOARD_SIZE, game_state)
 
-	score = static_eval(BOARD_SIZE, game_state, 1, 2, game_state.p1_captures, game_state.p0_captures)
+	score = static_eval(BOARD_SIZE, game_state, 1, 2, game_state.p1_captures, game_state.p2_captures)
 
-	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p0_captures)}")
-
-main()
+	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p2_captures)}")
