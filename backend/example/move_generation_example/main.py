@@ -105,6 +105,139 @@ def check_capture_made_dir(direction_fn, idx, board_size, curr_piece, board):
 				return True
 	return False
 
+# group pairs of directions together, assuming the results returned are
+# [get_top_idx, get_btm_idx, get_left_idx, get_right_idx, get_top_left_idx, get_top_right_idx, get_btm_left_idx, get_btm_right_idx]
+def group_local_expansions(local_expansions):
+	res = []
+	res.append(local_expansions[0][::-1] + local_expansions[1])	
+	res.append(local_expansions[2][::-1] + local_expansions[3])
+	res.append(local_expansions[4][::-1] + local_expansions[7])	
+	res.append(local_expansions[5][::-1] + local_expansions[6])	
+
+	return res
+
+# given a 1d buffer and the piece, retuen True if the buffer has a free three if idx_to_place
+# is placed with piece
+def has_free_three(buffer, piece, idx_to_place):
+	for i in range(len(buffer) - 1):
+		# if current cell is  0 and next cell is piece, init counting sequence
+		if buffer[i] == 0 and buffer[i + 1] == piece :
+			gap = 0
+			accum = 0
+			enemy_flag = False
+			if i == idx_to_place:
+				accum += 1
+			# start counting with 1 allowed gap
+			for j in range(i + 1, len(buffer)):
+				# current idx to place
+				if j == idx_to_place:
+					accum += 1
+					continue
+				# gap encountered but we already passsed another gap
+				if buffer[j] == 0 and gap != 0:
+					break
+				# enemy encountered
+				if buffer[j] != piece and buffer[j] != 0:
+					if gap == 0:
+						enemy_flag = True
+					break
+				# first gap
+				if buffer[j] == 0:
+					gap += 1
+				# our piece
+				if buffer[j] == piece:
+					accum += 1
+			# if these conditions are met, means we have a free three
+			# check for 3 pieces, idx_to_place is around the current counted piece and idx_to_place isnt at the sides
+			if accum == 3 and (idx_to_place >= i and idx_to_place <= i + 4) and idx_to_place != 0 and idx_to_place != len(buffer) - 1:
+				# check that if idx_to_place < 4, the first element is empty
+				if idx_to_place < 4 and buffer[0] != 0: 
+					return False
+				# check that if idx_to_place >= len(buffer) - 4, last element is empty 
+				if idx_to_place >= len(buffer) - 4 and buffer[-1] != 0:
+					return False
+				# got enemy
+				if enemy_flag:
+					return False
+				return True
+	return False
+
+# Detects double free threes when attempting to place a piece, will return true if a double free three
+# is recognigzed
+def detect_double_free_threes(input_idx, BOARD_SIZE, piece, board) -> bool :
+	# generate local expansions of current piece
+	local_expansions = expand_all_directions(input_idx, BOARD_SIZE, BOARD_SIZE)
+
+	# group pairs of directions together, assuming the results returned are
+	# 	[get_top_idx, get_btm_idx, get_left_idx, get_right_idx, get_top_left_idx, get_top_right_idx, get_btm_left_idx, get_btm_right_idx]
+	local_expansion_grouping = group_local_expansions(local_expansions)
+	print(local_expansion_grouping)
+
+	# for each grouping, extract cells
+	cell_value_buffers = []
+	group_indices = []
+	for local_expansion in local_expansion_grouping:
+		cell_values = []
+		group_idx = -1
+		for (i, expansion_index) in enumerate(local_expansion):
+			# if the current idx is more than the idx stated in expansion, 
+			# append the current value of idx at board but also make sure group idx is not empty
+			if expansion_index > input_idx and group_idx == -1:
+				cell_values.append(board[input_idx])
+				group_idx = i # the index where the the input index is located at the group 
+
+			cell_values.append(board[expansion_index])
+		cell_value_buffers.append(cell_values)
+		group_indices.append(group_idx) # sometimes this group_idx will remain -1, this means input_idx is at the border. This will be okay since has_free_three will return false if input_idx is at border of buffer.
+		print(f"{cell_values} {group_idx}")
+
+	# count valid free threes for each grouping. If valid free threes are > 1, return True
+	free_three_idx = -1
+	for (i, buffer) in enumerate(cell_value_buffers):
+		if has_free_three(buffer, piece, group_indices[i]):
+			if free_three_idx != -1:
+				return True
+			print(f"has_free_three({buffer}, {piece}, {group_indices[i]})")
+			free_three_idx = i
+
+	if free_three_idx == -1:
+		return False
+
+	# for the valid three, expand all elements in that grouping and count valid free threes
+	grouping_with_ft = local_expansion_grouping[free_three_idx]
+	print(grouping_with_ft)
+	for grouping_idx in grouping_with_ft:
+		local_expansions_ft = expand_all_directions(grouping_idx, BOARD_SIZE, BOARD_SIZE)
+		local_expansion_grouping_ft = group_local_expansions(local_expansions_ft)
+
+		# for each grouping, extract cells
+		cell_value_buffers = []
+		group_indices = []
+		for local_expansion in local_expansion_grouping_ft:
+			cell_values = []
+			group_idx = -1 
+			for (i, expansion_index) in enumerate(local_expansion):
+				if expansion_index > grouping_idx and group_idx == -1:
+					cell_values.append(board[grouping_idx])
+					group_idx = i
+
+				cell_values.append(board[expansion_index])
+			cell_value_buffers.append(cell_values)
+			group_indices.append(group_idx) # sometimes this group_idx will remain -1, this means grouping_idx is at the border. This will be okay since has_free_three will return false if grouping_idx is at border of buffer.
+
+		# for each of those expansions. If any valid three is found besides the original buffer, return True
+		for (i, buffer) in enumerate(cell_value_buffers):
+			if free_three_idx == i:
+				continue
+			print(f"{group_indices} {buffer} {local_expansion_grouping_ft[i]} {grouping_idx}")
+			if has_free_three(buffer, piece, group_indices[i]):
+				# print(f"\thas_free_three({buffer}, {piece}, {group_indices[i]}), {free_three_idx} {i}")
+				# print(f"{local_expansion_grouping_ft}")
+				# print(f"{cell_value_buffers}")
+				return True
+	  
+	return False
+
 # This function will simulate the effect of placing a piece on the board, and it would return None if such 
 # a placmenet is invalid / impossible
 def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.GameState:
@@ -341,13 +474,13 @@ def main():
 	board = bytes([
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 0, 0,
+		0, 0, 0, 0, 1, 1, 0, 2, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 1, 1, 0, 0, 0, 2, 0, 0,
-		0, 1, 0, 1, 0, 0, 2, 0, 1,
-		0, 2, 0, 0, 2, 0, 2, 0, 0,
-		0, 0, 0, 0, 0, 0, 2, 0, 0,
-		0, 0, 0, 0, 0, 0, 1, 0, 2,
-		0, 0, 0, 0, 0, 0, 0, 0, 0
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 3, 0, 0
 	])
 
 	# p1 is 1, p2 is 2
@@ -360,7 +493,8 @@ def main():
 		time_to_think_ns=0
 	)
 
-	print(expand_all_directions(0, BOARD_SIZE, BOARD_SIZE))
+	print(detect_double_free_threes(42, BOARD_SIZE, 1, board))
+	# print(has_free_three([0, 1, 1, 0, 2, 0, 0, 0, 0], 1, 3))
 	# new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
 	# if new_state is None:
 	# 	print("new state is none")
