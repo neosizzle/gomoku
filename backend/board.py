@@ -4,120 +4,127 @@ import game_pb2
 from concurrent import futures
 import time
 from google.protobuf.wrappers_pb2 import BoolValue
-
+import minimax
 class GomokuGame(game_pb2_grpc.GameServicer):
-    def __init__(self):
-        self.size = 19
-        self.board = [[0 for _ in range(self.size)] for _ in range(self.size)]
-        self.current_player = 1
-        self.captures = {'X': 0, 'O': 0}
-        self.num_turns = 0
-        self.meta = game_pb2.GameMeta(_initialized=True, last_updated=int(time.time()), mode=game_pb2.ModeType.PVP_STANDARD, grid_size=self.size)
+	def __init__(self):
+		self.size = 19
+		self.board = [0] * (self.size * self.size)
+		self.current_player = 1
+		self.captures = {'1': 0, '2': 0}
+		self.num_turns = 0
+		self.meta = game_pb2.GameMeta(_initialized=True, last_updated=int(time.time()), mode=game_pb2.ModeType.PVP_STANDARD, grid_size=self.size)
 
-    def GetGameMeta(self, request, context):
-        return self.meta
+	def GetGameMeta(self, request, context):
+		return self.meta
 
-    def SetGameMeta(self, request, context):
-        self.meta = request
-        return game_pb2.Empty()
+	def SetGameMeta(self, request, context):
+		self.meta = request
+		return game_pb2.Empty()
 
-    def Reset(self, request, context):
-        self.__init__()
-        return game_pb2.Empty()
+	def Reset(self, request, context):
+		self.__init__()
+		return game_pb2.Empty()
 
-    def SuggestNextMove(self, game_state, context):
-        row, col = self.decode_board(game_state.board)
-        if self.place_piece(row, col):
-            return self.get_game_state()
-        context.set_details("Invalid move.")
-        context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-        return game_state
+	def SuggestNextMove(self, game_state, context):
+		suggested_state = minimax.basic_minimax(game_state, 19, 2, 2)
+		self.current_player = 1
+		return suggested_state
 
-    def GetLastGameState(self, request, context):
-        return self.get_game_state()
+	def updateState(self, game_state):
+		self.board = self.decode_board(game_state.board)
+	
+	def GetLastGameState(self, request, context):
+		return self.get_game_state()
 
-    def GetGameState(self, request, context):
-        return self.get_game_state()
+	def GetGameState(self, request, context):
+		return self.get_game_state()
 
-    def decode_board(self, board_bytes):
-        board = [board_bytes[i:i+19] for i in range(0, len(board_bytes), 19)]
-        return [(i, j) for i in range(self.size) for j in range(self.size) if board[i][j] != b' ']
+	def decode_board(self, board_bytes):
+		return [b for b in board_bytes]
 
-    def get_game_state(self):
-        board_bytes = self.encode_board()
-        return game_pb2.GameState(
-            board=board_bytes,
-            p1_captures=1,
-            p0_captures=2,
-            num_turns=self.num_turns,
-            is_end=self.is_game_over(),
-            time_to_think_ns=0
-        )
+	def get_game_state(self):
+		board_bytes = self.encode_board()
+		return game_pb2.GameState(
+			board = board_bytes,
+			p1_captures=1,
+			p0_captures=2,
+			num_turns=self.num_turns,
+			is_end=self.is_game_over(),
+			time_to_think_ns=0
+		)
+		
+	def encode_board(self):
+		return bytes(self.board)
 
-    def encode_board(self):
-        flat_board = [cell for row in self.board for cell in row]
-        return b''.join(int(cell).to_bytes(4, byteorder='big') for cell in flat_board)
+	def PlacePiece(self, move_request, context):
+		print(f"Received move: x={move_request.x}, y={move_request.y}")
+		row = move_request.y
+		col = move_request.x
+		index = row * self.size + col  # Convert to 1D index
 
-    def PlacePiece(self, move_request, context):
-        print(f"Received move: x={move_request.x}, y={move_request.y}")
-        row = move_request.y
-        col = move_request.x
-        if self.is_move_valid(row, col):
-            self.board[row][col] = self.current_player
-            self.num_turns += 1
-            self.current_player = 2 if self.current_player == 1 else 1
-            return BoolValue(value=True)
-        else:
-            print("Invalid move. Try again.")
-        return BoolValue(value=False)
+		if self.current_player != 1:  # Ensure it's Player 1's turn
+			return BoolValue(value=False)
 
-    def is_move_valid(self, row, col):
-        if self.board[row][col] == 0:
-            if self.num_turns == 0:
-                return row == 9 and col == 9
-            return self.surrounding_check(row, col)
-        return False
-            
-    def surrounding_check(self, row, col):
-        surrounding_values = []
+		if self.is_move_valid(index):
+			self.board[index] = self.current_player
+			self.num_turns += 1
+			
+			# Now let the AI suggest a move
+			suggested_state = self.SuggestNextMove(self.get_game_state(), context)
+			
+			# Update the board state after AI move
+			self.updateState(suggested_state)
+			# print(self.board)
+			return BoolValue(value=True)
+		else:
+			print("Invalid move. Try again.")
+		
+		return BoolValue(value=False)
 
-        directions = [
-            (-1, -1), (-1, 0), (-1, 1),
-            (0, -1),          (0, 1),    
-            (1, -1), (1, 0), (1, 1)       
-        ]
+	def is_move_valid(self, index):
+		if 0 <= index < len(self.board):  # Check bounds
+			return self.board[index] == 0  # Check if the cell is empty
+		return False
+	def surrounding_check(self, row, col):
+		surrounding_values = []
 
-        for dr, dc in directions:
-            new_row, new_col = row + dr, col + dc
+		directions = [
+			(-1, -1), (-1, 0), (-1, 1),
+			(0, -1),          (0, 1),    
+			(1, -1), (1, 0), (1, 1)       
+		]
 
-            if 0 <= new_row < self.size and 0 <= new_col < self.size:
-                value = self.board[new_row][new_col]
-                if value == 1 or value == 2:
-                    return True
-        return False
+		for dr, dc in directions:
+			new_row, new_col = row + dr, col + dc
 
-    def is_game_over(self):
-        return self.check_winner() or self.num_turns >= self.size * self.size
+			if 0 <= new_row < self.size and 0 <= new_col < self.size:
+				value = self.board[new_row][new_col]
+				if value == 1 or value == 2:
+					return True
+		return False
 
-    def check_winner(self, row=None, col=None):
-        return False
+	def is_game_over(self):
+		return self.check_winner() or self.num_turns >= self.size * self.size
 
-    def check_capture(self, row, col):
-        return False
+	def check_winner(self, row=None, col=None):
+		return False
 
-    def handle_capture(self, row, col):
-        pass
+	def check_capture(self, row, col):
+		return False
+
+	def handle_capture(self, row, col):
+		pass
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    game_pb2_grpc.add_GameServicer_to_server(GomokuGame(), server)
-    server.add_insecure_port('[::]:50051')
-    server.start()
-    print("Server is running on port 50051...")
-    try:
-        while True:
-            pass
-    except KeyboardInterrupt:
-        server.stop(0)
+	server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+	game_pb2_grpc.add_GameServicer_to_server(GomokuGame(), server)
+	server.add_insecure_port('[::]:50051')
+	server.start()
+	print("Server is running on port 50051...")
+	try:
+		while True:
+			pass
+	except KeyboardInterrupt:
+		server.stop(0)
 
 serve()
