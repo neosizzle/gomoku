@@ -159,6 +159,9 @@ def has_free_three(buffer, piece, idx_to_place):
 				# got enemy
 				if enemy_flag:
 					return False
+				# check enemy_flag blind spot edge case
+				if buffer[i - 1] != piece and buffer[i - 1] != 0:
+					return False
 				return True
 	return False
 
@@ -171,7 +174,7 @@ def detect_double_free_threes(input_idx, BOARD_SIZE, piece, board) -> bool :
 	# group pairs of directions together, assuming the results returned are
 	# 	[get_top_idx, get_btm_idx, get_left_idx, get_right_idx, get_top_left_idx, get_top_right_idx, get_btm_left_idx, get_btm_right_idx]
 	local_expansion_grouping = group_local_expansions(local_expansions)
-	print(local_expansion_grouping)
+	# print(local_expansion_grouping)
 
 	# for each grouping, extract cells
 	cell_value_buffers = []
@@ -189,7 +192,7 @@ def detect_double_free_threes(input_idx, BOARD_SIZE, piece, board) -> bool :
 			cell_values.append(board[expansion_index])
 		cell_value_buffers.append(cell_values)
 		group_indices.append(group_idx) # sometimes this group_idx will remain -1, this means input_idx is at the border. This will be okay since has_free_three will return false if input_idx is at border of buffer.
-		print(f"{cell_values} {group_idx}")
+		# print(f"{cell_values} {group_idx}")
 
 	# count valid free threes for each grouping. If valid free threes are > 1, return True
 	free_three_idx = -1
@@ -197,7 +200,7 @@ def detect_double_free_threes(input_idx, BOARD_SIZE, piece, board) -> bool :
 		if has_free_three(buffer, piece, group_indices[i]):
 			if free_three_idx != -1:
 				return True
-			print(f"has_free_three({buffer}, {piece}, {group_indices[i]})")
+			# print(f"has_free_three({buffer}, {piece}, {group_indices[i]})")
 			free_three_idx = i
 
 	if free_three_idx == -1:
@@ -248,6 +251,8 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.Game
 		return None
 	
 	# validate if placing this piece violates double free three rule
+	if detect_double_free_threes(index, BOARD_SIZE, piece, board):
+		return None
 
 	# validate if placing such a piece will capture opponenet
 	captured_validation_res = []
@@ -347,7 +352,7 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.Game
 		pass
 	
 	new_board = bytearray(board[:])
-	# place piece in empty space, TODO check for capture and win and heuristics
+	# place piece in empty space, TODO check for win and heuristics
 	new_board[index] = piece
 	new_board = bytes(new_board)
 
@@ -474,13 +479,13 @@ def main():
 	board = bytes([
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 1, 0, 0,
-		0, 0, 0, 0, 0, 0, 1, 0, 0,
-		0, 0, 0, 0, 1, 1, 0, 2, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 1, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 3, 0, 0
+		0, 0, 0, 0, 0, 0, 0, 0, 0
 	])
 
 	# p1 is 1, p2 is 2
@@ -493,8 +498,9 @@ def main():
 		time_to_think_ns=0
 	)
 
-	print(detect_double_free_threes(42, BOARD_SIZE, 1, board))
-	# print(has_free_three([0, 1, 1, 0, 2, 0, 0, 0, 0], 1, 3))
+	print(place_piece_attempt(59, 1, game_state, BOARD_SIZE))
+	# print(detect_double_free_threes(59, BOARD_SIZE, 1, board))
+	# print(has_free_three([0, 0, 0, 0, 2, 0, 1, 1, 0], 1, 5))
 	# new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
 	# if new_state is None:
 	# 	print("new state is none")
