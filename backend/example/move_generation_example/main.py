@@ -208,7 +208,7 @@ def detect_double_free_threes(input_idx, BOARD_SIZE, piece, board) -> bool :
 
 	# for the valid three, expand all elements in that grouping and count valid free threes
 	grouping_with_ft = local_expansion_grouping[free_three_idx]
-	print(grouping_with_ft)
+	# print(grouping_with_ft)
 	for grouping_idx in grouping_with_ft:
 		local_expansions_ft = expand_all_directions(grouping_idx, BOARD_SIZE, BOARD_SIZE)
 		local_expansion_grouping_ft = group_local_expansions(local_expansions_ft)
@@ -232,7 +232,7 @@ def detect_double_free_threes(input_idx, BOARD_SIZE, piece, board) -> bool :
 		for (i, buffer) in enumerate(cell_value_buffers):
 			if free_three_idx == i:
 				continue
-			print(f"{group_indices} {buffer} {local_expansion_grouping_ft[i]} {grouping_idx}")
+			# print(f"{group_indices} {buffer} {local_expansion_grouping_ft[i]} {grouping_idx}")
 			if has_free_three(buffer, piece, group_indices[i]):
 				# print(f"\thas_free_three({buffer}, {piece}, {group_indices[i]}), {free_three_idx} {i}")
 				# print(f"{local_expansion_grouping_ft}")
@@ -392,24 +392,11 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 		if curr_board[i] != 0:
 			continue
 
-		# clone new board for game state, TODO optimize this to preallocation
-		new_board = bytearray(curr_board[:])
-		# place piece in empty space, TODO check for capture and win and heuristics
-		new_board[i] = piece
-		new_board = bytes(new_board)
-
-		game_state = game_pb2.GameState(
-			board=new_board,
-			p1_captures=state.p1_captures,
-			p2_captures=state.p2_captures,
-			num_turns=state.num_turns + 1,
-			is_end=False,
-			time_to_think_ns=0
-		)
-		
-		res.append(game_state)
-
-	# pretty_print_board(curr_board, BOARD_SIZE)
+		# attempt ro place piece in empty space. If such a piece is not valid
+		# do not add the move into the result array
+		game_state = place_piece_attempt(i, piece, state, BOARD_SIZE)
+		if game_state is not None:
+			res.append(game_state)
 
 	return res
 
@@ -483,7 +470,7 @@ def main():
 		0, 0, 1, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 1, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 1, 1, 0,
+		0, 0, 0, 0, 0, 0, 2, 2, 1,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0
 	])
@@ -498,7 +485,10 @@ def main():
 		time_to_think_ns=0
 	)
 
-	print(place_piece_attempt(59, 1, game_state, BOARD_SIZE))
+	moves = generate_possible_moves(game_state, BOARD_SIZE, 1)
+	for move in moves:
+		pretty_print_board(move.board, BOARD_SIZE)
+		print("")
 	# print(detect_double_free_threes(59, BOARD_SIZE, 1, board))
 	# print(has_free_three([0, 0, 0, 0, 2, 0, 1, 1, 0], 1, 5))
 	# new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
