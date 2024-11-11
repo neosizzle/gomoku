@@ -8,15 +8,12 @@
 
 syntax = "proto3";
 
-import "google/protobuf/wrappers.proto";
-
 service Game {
 	rpc GetGameMeta(Empty) returns (GameMeta) {}
 	rpc SetGameMeta(GameMeta) returns (Empty) {}
 	rpc Reset(Empty) returns (Empty) {}
 	rpc SuggestNextMove(GameState) returns (GameState) {}
 	rpc GetLastGameState(Empty) returns (GameState) {}
-	rpc PlacePiece(MoveRequest) returns (google.protobuf.BoolValue) {};
 }
 
 enum ModeType {
@@ -24,11 +21,6 @@ enum ModeType {
     AI_PRO = 1;
     PVP_STANDARD = 2;
 	PVP_PRO = 3;
-}
-
-message MoveRequest {
-    int32 x = 1;
-    int32 y = 2;
 }
 
 message Empty {}
