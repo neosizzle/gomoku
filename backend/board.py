@@ -7,7 +7,7 @@ from google.protobuf.wrappers_pb2 import BoolValue
 import minimax
 class GomokuGame(game_pb2_grpc.GameServicer):
 	def __init__(self):
-		self.size = 19
+		self.size = 9
 		self.board = [0] * (self.size * self.size)
 		self.current_player = 1
 		self.captures = {'1': 0, '2': 0}
@@ -26,7 +26,7 @@ class GomokuGame(game_pb2_grpc.GameServicer):
 		return game_pb2.Empty()
 
 	def SuggestNextMove(self, game_state, context):
-		suggested_state = minimax.basic_minimax(game_state, 19, 2, 2)
+		suggested_state = minimax.basic_minimax(game_state, self.size, 2, 2)
 		self.current_player = 1
 		return suggested_state
 
@@ -47,61 +47,14 @@ class GomokuGame(game_pb2_grpc.GameServicer):
 		return game_pb2.GameState(
 			board = board_bytes,
 			p1_captures=1,
-			p0_captures=2,
+			p2_captures=2,
 			num_turns=self.num_turns,
-			is_end=self.is_game_over(),
+			is_end=2,
 			time_to_think_ns=0
 		)
 		
 	def encode_board(self):
 		return bytes(self.board)
-
-	def PlacePiece(self, move_request, context):
-		print(f"Received move: x={move_request.x}, y={move_request.y}")
-		row = move_request.y
-		col = move_request.x
-		index = row * self.size + col  # Convert to 1D index
-
-		if self.current_player != 1:  # Ensure it's Player 1's turn
-			return BoolValue(value=False)
-
-		if self.is_move_valid(index):
-			self.board[index] = self.current_player
-			self.num_turns += 1
-			
-			# Now let the AI suggest a move
-			suggested_state = self.SuggestNextMove(self.get_game_state(), context)
-			
-			# Update the board state after AI move
-			self.updateState(suggested_state)
-			# print(self.board)
-			return BoolValue(value=True)
-		else:
-			print("Invalid move. Try again.")
-		
-		return BoolValue(value=False)
-
-	def is_move_valid(self, index):
-		if 0 <= index < len(self.board):  # Check bounds
-			return self.board[index] == 0  # Check if the cell is empty
-		return False
-	def surrounding_check(self, row, col):
-		surrounding_values = []
-
-		directions = [
-			(-1, -1), (-1, 0), (-1, 1),
-			(0, -1),          (0, 1),    
-			(1, -1), (1, 0), (1, 1)       
-		]
-
-		for dr, dc in directions:
-			new_row, new_col = row + dr, col + dc
-
-			if 0 <= new_row < self.size and 0 <= new_col < self.size:
-				value = self.board[new_row][new_col]
-				if value == 1 or value == 2:
-					return True
-		return False
 
 	def is_game_over(self):
 		return self.check_winner() or self.num_turns >= self.size * self.size

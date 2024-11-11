@@ -63,7 +63,7 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 		game_state = game_pb2.GameState(
 			board=new_board,
 			p1_captures=state.p1_captures,
-			p0_captures=state.p0_captures,
+			p2_captures=state.p2_captures,
 			num_turns=state.num_turns + 1,
 			is_end=False,
 			time_to_think_ns=0

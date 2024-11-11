@@ -71,9 +71,9 @@
 <body>
     <h1>Gomoku Game</h1>
     <table id="board">
-        {% for y in range(19) %}
+        {% for y in range(board_size) %}
         <tr>
-            {% for x in range(19) %}
+            {% for x in range(board_size) %}
             <td data-x="{{ x }}" data-y="{{ y }}">
                 {% if board[y][x] == 0 %}
                     &nbsp; 

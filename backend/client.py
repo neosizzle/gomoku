@@ -9,32 +9,36 @@ class GomokuClient:
 		self.app = Flask('game_app', template_folder='./backend/templates')
 		self.channel = grpc.insecure_channel('localhost:50051')
 		self.stub = game_pb2_grpc.GameStub(self.channel)
-		self.update_game_state()
+		self.board_size = 9
+		self.meta = self.stub.GetGameMeta(game_pb2.Empty())
+		self.game_state = self.stub.GetLastGameState(game_pb2.Empty())
+		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
 		self.app.add_url_rule('/', 'index', self.index)
 		self.app.add_url_rule('/move', 'move', self.move, methods=['POST'])
 		self.app.add_url_rule('/board', 'get_board', self.get_board)
 
 
 	def index(self):
-		return render_template('test.html', board=self.board)
+		return render_template('test.html', board=self.board, board_size=self.board_size)
 
 	def get_board(self):
 		return jsonify(board=self.board)
 
 	def move(self):
+		print("waiting for move suggestion..")
 		x = int(request.form['x'])
 		y = int(request.form['y'])
-
-		move_request = game_pb2.MoveRequest(x=x, y=y)
-		response = self.stub.PlacePiece(move_request)
-		if response.value:
-			self.update_game_state()
-		return jsonify(status=response.value)  # Ensure response.value is correctly accessed
-
-	def update_game_state(self):
-		self.meta = self.stub.GetGameMeta(game_pb2.Empty())
-		self.game_state = self.stub.GetLastGameState(game_pb2.Empty())
-		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), 19)
+		index = y * self.board_size + x  # Convert to 1D index
+		
+		# TODO: capture checking here
+		board_copy = bytearray(self.game_state.board[:])
+		board_copy[index] = 1 # we are player 1, AI is 2
+		self.game_state.board = bytes(board_copy)
+	
+		next_move_state = self.stub.SuggestNextMove(self.game_state)
+		self.game_state = next_move_state
+		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
+		return jsonify(status=200)
 
 	def bytes_to_int_array(self, byte_array):
 		return [b for b in byte_array]

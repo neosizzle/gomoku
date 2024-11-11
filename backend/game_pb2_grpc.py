@@ -4,7 +4,6 @@ import grpc
 import warnings
 
 import game_pb2 as game__pb2
-from google.protobuf import wrappers_pb2 as google_dot_protobuf_dot_wrappers__pb2
 
 GRPC_GENERATED_VERSION = '1.66.2'
 GRPC_VERSION = grpc.__version__
@@ -60,11 +59,6 @@ class GameStub(object):
                 request_serializer=game__pb2.Empty.SerializeToString,
                 response_deserializer=game__pb2.GameState.FromString,
                 _registered_method=True)
-        self.PlacePiece = channel.unary_unary(
-                '/Game/PlacePiece',
-                request_serializer=game__pb2.MoveRequest.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_wrappers__pb2.BoolValue.FromString,
-                _registered_method=True)
 
 
 class GameServicer(object):
@@ -100,12 +94,6 @@ class GameServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def PlacePiece(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
 
 def add_GameServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -133,11 +121,6 @@ def add_GameServicer_to_server(servicer, server):
                     servicer.GetLastGameState,
                     request_deserializer=game__pb2.Empty.FromString,
                     response_serializer=game__pb2.GameState.SerializeToString,
-            ),
-            'PlacePiece': grpc.unary_unary_rpc_method_handler(
-                    servicer.PlacePiece,
-                    request_deserializer=game__pb2.MoveRequest.FromString,
-                    response_serializer=google_dot_protobuf_dot_wrappers__pb2.BoolValue.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -275,33 +258,6 @@ class Game(object):
             '/Game/GetLastGameState',
             game__pb2.Empty.SerializeToString,
             game__pb2.GameState.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def PlacePiece(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/Game/PlacePiece',
-            game__pb2.MoveRequest.SerializeToString,
-            google_dot_protobuf_dot_wrappers__pb2.BoolValue.FromString,
             options,
             channel_credentials,
             insecure,

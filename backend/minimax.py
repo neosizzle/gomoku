@@ -16,8 +16,8 @@ def minimax_eval(
 	our_piece = max_piece  # max_piece is our piece
 	enemy_piece = 2 if our_piece == 1 else 1
 
-	our_captures = curr_state.p0_captures if max_piece == 1 else curr_state.p1_captures
-	enemy_captures = curr_state.p1_captures if max_piece == 1 else curr_state.p0_captures
+	our_captures = curr_state.p1_captures if max_piece == 1 else curr_state.p2_captures
+	enemy_captures = curr_state.p2_captures if max_piece == 1 else curr_state.p1_captures
 
 	# Check if the current state exists in the move tree
 	state_node_index = -1
@@ -73,7 +73,6 @@ def basic_minimax(state: game_pb2.GameState, BOARD_SIZE: int, curr_piece: int, m
 			max_score = child_score
 			max_score_idx = i
 
-	print(f"{root_node.board == state.board}")
 	return root_children[max_score_idx]
 
 # def main():
