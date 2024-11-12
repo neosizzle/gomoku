@@ -161,7 +161,6 @@ def generate_diag_indices_inverse(board_size):
 			counter -= 1
 	return diag_indices
 
-# we are maximizing for p1 here (piece 2)
 # TODO optimize this, can check win condition here and can also calculate enemy score
 def static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece):
 	dimension = (BOARD_SIZE * BOARD_SIZE)
@@ -196,7 +195,7 @@ def static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece):
 
 				end_idx = start_idx
 
-				# Move end idx to enemy piece
+				# Move end idx to enemy piece or edge
 				if end_idx == len(extraction):
 						break
 				while extraction[end_idx] != enemy_piece:
@@ -212,7 +211,38 @@ def static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece):
 				num_pieces_section = section.count(our_piece)
 				extraction_score += (num_pieces_section) * (num_pieces_section)
 
-				# incur penalty on big gaps
+				# incur penalty if combo is not open / partially open (HIGH SENSITIVITY)
+				penalty_gap = 0
+				penalty_end_idx = start_idx
+				penalty_start_idx = start_idx
+
+				# move penalty strt and end idx to part where combo breaks
+				while penalty_end_idx != end_idx:
+					if extraction[penalty_end_idx] == 0:
+						if penalty_gap == 0:
+							penalty_gap += 1
+						else:
+							break
+					penalty_end_idx += 1
+
+				# check for edges
+				if penalty_start_idx == 0:
+					print(f"penalty_start_idx {penalty_start_idx} penalty_end_idx {penalty_end_idx} extraction {extraction}")
+					extraction_score -= num_pieces_section * 3
+				else:
+					if extraction[penalty_start_idx - 1] != 0:
+						# print(f"penalty_start_idx {penalty_start_idx} penalty_end_idx {penalty_end_idx} extraction {extraction}")
+						extraction_score -= num_pieces_section * 3
+				
+				if penalty_end_idx == len(extraction):
+					if extraction[penalty_end_idx - 1] != 0: 
+						print(f"penalty_start_idx {penalty_start_idx} penalty_end_idx {penalty_end_idx} extraction {extraction}")
+						extraction_score -= num_pieces_section * 3
+				else:
+					if extraction[penalty_end_idx] != 0:
+						extraction_score -= num_pieces_section * 3
+
+				# incur penalty on big gaps (LOW SENSITIVITY)
 				penalty_end_idx = start_idx
 				penalty_start_idx = start_idx
 				while penalty_end_idx != end_idx:
@@ -241,7 +271,7 @@ def static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece):
 					diff = penalty_end_idx - penalty_start_idx
 					if diff > 4 :
 						extraction_score -= 1
-
+				
 				# move start_idx to curr end_index
 				start_idx = end_idx
 			total_score += extraction_score
@@ -298,7 +328,7 @@ def check_win_condition(BOARD_SIZE, game_state, our_piece, our_captures):
 	
 	return False
 
-# 
+# checks if a win combination is valid - no captures in combination pieces
 def check_valid_win_combo(BOARD_SIZE, game_state):
 	board = game_state.board
 
@@ -369,11 +399,26 @@ def check_valid_win_combo(BOARD_SIZE, game_state):
 
 
 def static_eval(BOARD_SIZE, game_state, our_piece, enemy_piece, our_captures, enemy_captures):
-	final_score = static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece)
+	my_score = static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece)
+	print(f"my_score {my_score}")
+	final_score = my_score
 	final_score += our_captures * 2
 
-	final_score -= static_eval_directional(BOARD_SIZE, game_state, enemy_piece, our_piece)
+	enemy_score = static_eval_directional(BOARD_SIZE, game_state, enemy_piece, our_piece)
+	# enemy_score = -1
+	print(f"enemy_score {enemy_score}")
+	final_score -= enemy_score
 	final_score -= enemy_captures * 2
+
+	# see who moves next, will have advantage. Assumes p1 always moves first
+	if game_state.num_turns % 2 == 0:
+		print("1 moved, 2 moves next")
+		if our_piece == 2:
+			final_score += 5
+	else:
+		print("2 moved, 1 moves next")
+		if our_piece == 1:
+			final_score += 5
 
 	pretty_print_board(game_state.board, BOARD_SIZE)
 	print("==========================")
@@ -385,31 +430,31 @@ def main():
 	BOARD_SIZE = 10
 
 	board = bytes([
-		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 2, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 2, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 2, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
 	]
 	)
 	game_state = game_pb2.GameState(
 		board=board,
 		p1_captures=0,
-		p0_captures=0,
-		num_turns=0,
+		p2_captures=0,
+		num_turns=3,
 		is_end=False,
 		time_to_think_ns=0
 	)
 
 	# check_valid_win_combo(BOARD_SIZE, game_state)
 
-	score = static_eval(BOARD_SIZE, game_state, 1, 2, game_state.p1_captures, game_state.p0_captures)
+	score = static_eval(BOARD_SIZE, game_state, 2, 1, game_state.p1_captures, game_state.p2_captures)
 
-	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p0_captures)}")
+	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p2_captures)}")
 
 main()

@@ -33,17 +33,17 @@ class GameMeta(_message.Message):
     def __init__(self, _initialized: bool = ..., last_updated: _Optional[int] = ..., mode: _Optional[_Union[ModeType, str]] = ..., grid_size: _Optional[int] = ...) -> None: ...
 
 class GameState(_message.Message):
-    __slots__ = ("board", "p1_captures", "p0_captures", "num_turns", "is_end", "time_to_think_ns")
+    __slots__ = ("board", "p1_captures", "p2_captures", "num_turns", "is_end", "time_to_think_ns")
     BOARD_FIELD_NUMBER: _ClassVar[int]
     P1_CAPTURES_FIELD_NUMBER: _ClassVar[int]
-    P0_CAPTURES_FIELD_NUMBER: _ClassVar[int]
+    P2_CAPTURES_FIELD_NUMBER: _ClassVar[int]
     NUM_TURNS_FIELD_NUMBER: _ClassVar[int]
     IS_END_FIELD_NUMBER: _ClassVar[int]
     TIME_TO_THINK_NS_FIELD_NUMBER: _ClassVar[int]
     board: bytes
     p1_captures: int
-    p0_captures: int
+    p2_captures: int
     num_turns: int
-    is_end: bool
+    is_end: int
     time_to_think_ns: int
-    def __init__(self, board: _Optional[bytes] = ..., p1_captures: _Optional[int] = ..., p0_captures: _Optional[int] = ..., num_turns: _Optional[int] = ..., is_end: bool = ..., time_to_think_ns: _Optional[int] = ...) -> None: ...
+    def __init__(self, board: _Optional[bytes] = ..., p1_captures: _Optional[int] = ..., p2_captures: _Optional[int] = ..., num_turns: _Optional[int] = ..., is_end: _Optional[int] = ..., time_to_think_ns: _Optional[int] = ...) -> None: ...
