@@ -57,7 +57,7 @@ def minimax_eval(
 
 @move_generation.measure_duration_ns
 def basic_minimax(state: game_pb2.GameState, BOARD_SIZE: int, curr_piece: int, max_piece: int) -> game_pb2.GameState:
-	depth = 3
+	depth = 2
 	# generate move tree / get move tree from cache
 	move_tree = move_generation.generate_move_tree(state, BOARD_SIZE, curr_piece, depth)
 	root_node = move_tree[0][0] # garentee

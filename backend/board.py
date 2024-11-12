@@ -46,8 +46,8 @@ class GomokuGame(game_pb2_grpc.GameServicer):
 		board_bytes = self.encode_board()
 		return game_pb2.GameState(
 			board = board_bytes,
-			p1_captures=1,
-			p2_captures=2,
+			p1_captures=0,
+			p2_captures=0,
 			num_turns=self.num_turns,
 			is_end=2,
 			time_to_think_ns=0
