@@ -62,7 +62,7 @@ def basic_minimax(state: game_pb2.GameState, BOARD_SIZE: int, curr_piece: int, m
 	move_tree = move_generation.generate_move_tree(state, BOARD_SIZE, curr_piece, depth)
 	root_node = move_tree[0][0] # garentee
 	root_children = move_tree[0][1]
-	max_score = -1
+	max_score = -999999999
 	max_score_idx = -1
 
 	# iterate roots children and call minimax_eval, record the scores and pick the max one 

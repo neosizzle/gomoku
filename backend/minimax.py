@@ -30,7 +30,8 @@ def minimax_eval(
 
 	# If no valid state found, perform static evaluation
 	if state_node_index == -1:
-		return static_eval.static_eval(BOARD_SIZE, curr_state, our_piece, enemy_piece, our_captures, enemy_captures)
+		res = static_eval.static_eval(BOARD_SIZE, curr_state, our_piece, enemy_piece, our_captures, enemy_captures)
+		return res
 
 	# Initialize ideal_score based on whether we're maximizing or minimizing
 	move_tree_node = move_tree[state_node_index][0]
@@ -57,12 +58,12 @@ def minimax_eval(
 
 @move_generation.measure_duration_ns
 def basic_minimax(state: game_pb2.GameState, BOARD_SIZE: int, curr_piece: int, max_piece: int) -> game_pb2.GameState:
-	depth = 2
+	depth = 1
 	# generate move tree / get move tree from cache
 	move_tree = move_generation.generate_move_tree(state, BOARD_SIZE, curr_piece, depth)
 	root_node = move_tree[0][0] # garentee
 	root_children = move_tree[0][1]
-	max_score = -1
+	max_score = -999999999
 	max_score_idx = -1
 
 	# iterate roots children and call minimax_eval, record the scores and pick the max one 

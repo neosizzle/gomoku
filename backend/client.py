@@ -9,7 +9,7 @@ class GomokuClient:
 		self.app = Flask('game_app', template_folder='./backend/templates')
 		self.channel = grpc.insecure_channel('localhost:50051')
 		self.stub = game_pb2_grpc.GameStub(self.channel)
-		self.board_size = 9
+		self.board_size = 10
 		self.meta = self.stub.GetGameMeta(game_pb2.Empty())
 		self.game_state = self.stub.GetLastGameState(game_pb2.Empty())
 		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
@@ -25,7 +25,6 @@ class GomokuClient:
 		return jsonify(board=self.board)
 
 	def move(self):
-		print("waiting for move suggestion..")
 		x = int(request.form['x'])
 		y = int(request.form['y'])
 		index = y * self.board_size + x  # Convert to 1D index
@@ -34,9 +33,11 @@ class GomokuClient:
 		board_copy = bytearray(self.game_state.board[:])
 		board_copy[index] = 1 # we are player 1, AI is 2
 		self.game_state.board = bytes(board_copy)
+		self.game_state.num_turns += 1
 	
 		next_move_state = self.stub.SuggestNextMove(self.game_state)
 		self.game_state = next_move_state
+
 		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
 		return jsonify(status=200)
 

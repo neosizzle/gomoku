@@ -7,7 +7,7 @@ from google.protobuf.wrappers_pb2 import BoolValue
 import minimax
 class GomokuGame(game_pb2_grpc.GameServicer):
 	def __init__(self):
-		self.size = 9
+		self.size = 10
 		self.board = [0] * (self.size * self.size)
 		self.current_player = 1
 		self.captures = {'1': 0, '2': 0}
