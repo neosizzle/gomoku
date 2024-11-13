@@ -30,8 +30,7 @@ def minimax_eval(
 
 	# If no valid state found, perform static evaluation
 	if state_node_index == -1:
-		res = static_eval.static_eval(BOARD_SIZE, curr_state, our_piece, enemy_piece, our_captures, enemy_captures)
-		return res
+		return static_eval.static_eval(BOARD_SIZE, curr_state, our_piece, enemy_piece, our_captures, enemy_captures)
 
 	# Initialize ideal_score based on whether we're maximizing or minimizing
 	move_tree_node = move_tree[state_node_index][0]
