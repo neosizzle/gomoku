@@ -7,6 +7,17 @@ def pretty_print_board(buffer, BOARD_SIZE):
 			print("")
 			counter = 0
 
+def pretty_print_board_indent(buffer, BOARD_SIZE, indent_count):
+	counter = 0
+	print(" " * indent_count * 2, end='')
+	for byte in buffer:
+		print(f" {int(byte)} ", end='')
+		counter += 1
+		if counter == BOARD_SIZE:
+			print("")
+			print(" " * indent_count * 2, end='')
+			counter = 0
+
 def get_top_idx(idx, BOARD_SIZE):
 	if idx < BOARD_SIZE:
 		return -1

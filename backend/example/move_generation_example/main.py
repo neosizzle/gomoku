@@ -243,7 +243,7 @@ def detect_double_free_threes(input_idx, BOARD_SIZE, piece, board) -> bool :
 
 # This function will simulate the effect of placing a piece on the board, and it would return None if such 
 # a placmenet is invalid / impossible
-def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.GameState:
+def place_piece_attempt(index, piece, state, BOARD_SIZE, ignore_self_captured=False) -> None | game_pb2.GameState:
 	board = state.board
 
 	# validate if board index is empty 
@@ -294,16 +294,26 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.Game
 			new_board[idx2] = 0
 			new_p1_captures = new_p1_captures + 1 if piece == 1 else new_p1_captures
 			new_p2_captures = new_p2_captures + 1 if piece == 2 else new_p2_captures
-		
+
 		new_board = bytes(new_board)
 		game_state = game_pb2.GameState(
 			board=new_board,
 			p1_captures=new_p1_captures,
 			p2_captures=new_p2_captures,
 			num_turns=state.num_turns + 1,
-			is_end=1 if new_p1_captures >= 5 else 2 if new_p2_captures >= 5 else 0,
+			is_end=0,
 			time_to_think_ns=0
 		)
+
+		# check for win condition
+		is_end = 0
+		if piece == 1:
+			if static_eval.check_win_condition(BOARD_SIZE, game_state, 1, new_p1_captures) : is_end = 1
+		if piece == 2:
+			if static_eval.check_win_condition(BOARD_SIZE, game_state, 2, new_p2_captures) : is_end = 2
+
+		game_state.is_end = is_end
+
 		return game_state
 
 	# validate if placing such a piece will get myself captured
@@ -329,6 +339,10 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.Game
 	try:
 		we_got_captured_idx = captured_validation_res.index(False)
 		
+		# if we want to ignore self captured, return none
+		if ignore_self_captured:
+			return None
+		
 		# determine the direction of capture
 		fn_mapping = fn_mappings[we_got_captured_idx]
 
@@ -337,16 +351,27 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.Game
 		new_board[fn_mapping[1](index, BOARD_SIZE)] = 0
 		new_board = bytes(new_board)
 
-		new_p1_captures = state.p1_captures if piece == 2 else state.p1_captures + 1
-		new_p2_captures = state.p2_captures if piece == 1 else state.p2_captures + 1
+		new_p1_captures = state.p1_captures if piece == 1 else state.p1_captures + 1
+		new_p2_captures = state.p2_captures if piece == 2 else state.p2_captures + 1
+
 		game_state = game_pb2.GameState(
 			board=new_board,
 			p1_captures=new_p1_captures,
 			p2_captures=new_p2_captures,
 			num_turns=state.num_turns + 1,
-			is_end=1 if new_p1_captures >= 5 else 2 if new_p2_captures >= 5 else 0,
+			is_end=0,
 			time_to_think_ns=0
 		)
+
+		# check for win condition
+		is_end = 0
+		if piece == 1:
+			if static_eval.check_win_condition(BOARD_SIZE, game_state, 2, new_p2_captures) : is_end = 2
+		if piece == 2:
+			if static_eval.check_win_condition(BOARD_SIZE, game_state, 1, new_p1_captures) : is_end = 1
+
+		game_state.is_end = is_end
+
 		return game_state
 	except:
 		pass
@@ -361,9 +386,18 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE) -> None | game_pb2.Game
 		p1_captures=state.p1_captures,
 		p2_captures=state.p2_captures,
 		num_turns=state.num_turns + 1,
-		is_end=False,
+		is_end=0,
 		time_to_think_ns=0
 	)
+
+	# check for win condition
+	is_end = 0
+	if piece == 1:
+		if static_eval.check_win_condition(BOARD_SIZE, game_state, 1, state.p1_captures) : is_end = 1
+	if piece == 2:
+		if static_eval.check_win_condition(BOARD_SIZE, game_state, 2, state.p2_captures) : is_end = 2
+
+	game_state.is_end = is_end
 
 	return game_state
 
@@ -394,7 +428,7 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 
 		# attempt ro place piece in empty space. If such a piece is not valid
 		# do not add the move into the result array
-		game_state = place_piece_attempt(i, piece, state, BOARD_SIZE)
+		game_state = place_piece_attempt(i, piece, state, BOARD_SIZE, ignore_self_captured=True)
 		if game_state is not None:
 			res.append(game_state)
 
@@ -466,11 +500,11 @@ def main():
 	board = bytes([
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 2, 0, 0,
+		0, 0, 0, 1, 1, 1, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 0, 0,
+		0, 0, 0, 0, 0, 0, 2, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 1, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 1, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 2, 2, 1,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0
 	])
@@ -478,17 +512,13 @@ def main():
 	# p1 is 1, p2 is 2
 	game_state = game_pb2.GameState(
 		board=board,
-		p1_captures=0,
-		p2_captures=0,
+		p1_captures=4,
+		p2_captures=4,
 		num_turns=0,
-		is_end=False,
+		is_end=0,
 		time_to_think_ns=0
 	)
 
-	moves = generate_possible_moves(game_state, BOARD_SIZE, 1)
-	for move in moves:
-		pretty_print_board(move.board, BOARD_SIZE)
-		print("")
 	# print(detect_double_free_threes(59, BOARD_SIZE, 1, board))
 	# print(has_free_three([0, 0, 0, 0, 2, 0, 1, 1, 0], 1, 5))
 	# new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
@@ -505,10 +535,10 @@ def main():
 	# 	pretty_print_board(node[0].board, BOARD_SIZE)
 	# 	print("")
 
-	# possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 1)
-	# print(f"{len(possible_moves)}")
-	# for state in possible_moves:
-	# 	pretty_print_board(state.board, BOARD_SIZE)
-	# 	print("")
+	possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 1)
+	print(f"{len(possible_moves)}")
+	for state in possible_moves:
+		pretty_print_board(state.board, BOARD_SIZE)
+		print("")
 
 main()

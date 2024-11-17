@@ -432,6 +432,19 @@ def static_eval(BOARD_SIZE, game_state, our_piece, enemy_piece, our_captures, en
 	final_score -= enemy_score
 	final_score -= enemy_captures * 2
 
+	# kill shot
+	if check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures):
+		if our_piece == 1:
+			final_score += 6969
+		else:
+			final_score -= 6969
+
+	if check_win_condition(BOARD_SIZE, game_state, 2, game_state.p2_captures):
+		if our_piece == 2:
+			final_score += 6969
+		else:
+			final_score -= 6969
+
 
 	# pretty_print_board(game_state.board, BOARD_SIZE)
 	# print("==========================")

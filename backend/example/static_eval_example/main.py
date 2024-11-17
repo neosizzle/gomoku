@@ -426,12 +426,24 @@ def static_eval(BOARD_SIZE, game_state, our_piece, enemy_piece, our_captures, en
 	final_score = my_score
 	final_score += our_captures * 2
 
+
 	enemy_score = static_eval_directional(BOARD_SIZE, game_state, enemy_piece, our_piece, moves_next)
 	# enemy_score = -1
 	print(f"enemy_score {enemy_score}")
 	final_score -= enemy_score
 	final_score -= enemy_captures * 2
 
+	if check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures):
+		if our_piece == 1:
+			final_score += 6969
+		else:
+			final_score -= 6969
+
+	if check_win_condition(BOARD_SIZE, game_state, 2, game_state.p2_captures):
+		if our_piece == 2:
+			final_score += 6969
+		else:
+			final_score -= 6969
 
 	pretty_print_board(game_state.board, BOARD_SIZE)
 	print("==========================")
@@ -444,12 +456,12 @@ def main():
 
 	board = bytes([
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 1, 2, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 2, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 2, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 2, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -458,7 +470,7 @@ def main():
 	game_state = game_pb2.GameState(
 		board=board,
 		p1_captures=0,
-		p0_captures=0,
+		p2_captures=0,
 		num_turns=0,
 		is_end=False,
 		time_to_think_ns=0
@@ -467,8 +479,8 @@ def main():
 	# check_valid_win_combo(BOARD_SIZE, game_state)
 	# print(f"{calculate_open_bonus([0, 0, 0, 0, 0, 0, 0, 0, 1], 1, 2)}")
 
-	score = static_eval(BOARD_SIZE, game_state, 2, 1, game_state.p1_captures, game_state.p0_captures)
+	score = static_eval(BOARD_SIZE, game_state, 2, 1, game_state.p2_captures, game_state.p1_captures)
 
-	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p0_captures)}")
+	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p2_captures)}")
 
 main()

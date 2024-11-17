@@ -9,7 +9,7 @@ class GomokuGame(game_pb2_grpc.GameServicer):
 	def __init__(self):
 		self.size = 10
 		self.board = [0] * (self.size * self.size)
-		self.current_player = 1
+		self.is_end = 0
 		self.captures = {'1': 0, '2': 0}
 		self.num_turns = 0
 		self.meta = game_pb2.GameMeta(_initialized=True, last_updated=int(time.time()), mode=game_pb2.ModeType.PVP_STANDARD, grid_size=self.size)
