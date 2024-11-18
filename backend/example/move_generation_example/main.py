@@ -5,17 +5,6 @@ import game_pb2_grpc
 import game_pb2
 import static_eval
 
-def measure_duration_ns(func):
-    """Decorator to measure the duration of a function in nanoseconds."""
-    def wrapper(*args, **kwargs):
-        start_time = time.perf_counter()  # Start timing
-        result = func(*args, **kwargs)     # Call the function
-        end_time = time.perf_counter()      # End timing
-        duration_ns = (end_time - start_time) * 1_000_000_000  # Convert to nanoseconds
-        print(f"Function '{func.__name__}' took {duration_ns:.2f} ns")
-        return result
-    return wrapper
-
 def pretty_print_board(buffer, BOARD_SIZE):
 	counter = 0
 	for byte in buffer:
@@ -402,11 +391,16 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE, ignore_self_captured=Fa
 	return game_state
 
 # generates a list of next states based on the initial state given 
-def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: int) -> list[game_pb2.GameState]:
+# filter_endmoves = if winning endgame moves are generated, only return those moves
+def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: int, filter_endmoves=False) -> list[game_pb2.GameState]:
 	curr_board = state.board
 	dims = BOARD_SIZE * BOARD_SIZE
 	res = []
 	indices_to_check = set() # set for no dupes
+
+	# check if state is already endgame, if yes, return none
+	if state.is_end != 0:
+		return res
 
 	# we only select cells to fill if they are already near a piece
 	for i in range(dims):
@@ -432,6 +426,11 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 		if game_state is not None:
 			res.append(game_state)
 
+	if filter_endmoves:
+		winning_moves = list(filter(lambda x: x.is_end == piece, res))
+		if len(winning_moves) > 0:
+			res = winning_moves
+
 	return res
 
 def generate_move_tree(state: game_pb2.GameState, BOARD_SIZE: int, piece: int, depth: int) -> list[list[game_pb2.GameState | list[game_pb2.GameState]]]:
@@ -446,7 +445,7 @@ def generate_move_tree(state: game_pb2.GameState, BOARD_SIZE: int, piece: int, d
 				curr_piece = 1
 		# generate fisrt depth and append leaves to the tree
 		if len(res) == 0:
-			root_children = generate_possible_moves(state, BOARD_SIZE, curr_piece)
+			root_children = generate_possible_moves(state, BOARD_SIZE, curr_piece, filter_endmoves=True)
 			res.append([state, root_children])
 			for state in root_children:
 				res.append([state, None])
@@ -457,7 +456,7 @@ def generate_move_tree(state: game_pb2.GameState, BOARD_SIZE: int, piece: int, d
 			for j in range(len(res)):
 				if res[j][1] == None:
 					# generate children of leaf
-					leaf_children = generate_possible_moves(res[j][0], BOARD_SIZE, curr_piece)
+					leaf_children = generate_possible_moves(res[j][0], BOARD_SIZE, curr_piece, filter_endmoves=True)
 					res[j][1] = leaf_children
 					new_leaves.append(leaf_children)
 
@@ -500,13 +499,13 @@ def main():
 	board = bytes([
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 2, 0, 0,
-		0, 0, 0, 1, 1, 1, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 1, 0, 0,
-		0, 0, 0, 0, 0, 0, 2, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 1, 1, 1, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0
+		0, 0, 0, 0, 0, 2, 0, 0, 0,
+		0, 0, 0, 0, 0, 2, 0, 0, 0,
+		0, 0, 0, 0, 2, 2, 0, 0, 0
 	])
 
 	# p1 is 1, p2 is 2
@@ -535,7 +534,7 @@ def main():
 	# 	pretty_print_board(node[0].board, BOARD_SIZE)
 	# 	print("")
 
-	possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 1)
+	possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 1, filter_endmoves=True)
 	print(f"{len(possible_moves)}")
 	for state in possible_moves:
 		pretty_print_board(state.board, BOARD_SIZE)

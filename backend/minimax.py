@@ -76,8 +76,10 @@ def minimax_eval(
 	# print("")
 	return ideal_score # assume current node always has children, since base case is checked
 
+@utils.measure_duration_ns
 def basic_minimax(state: game_pb2.GameState, BOARD_SIZE: int, curr_piece: int, max_piece: int) -> game_pb2.GameState:
-	depth = 3
+	# we can afford to do depth 2 if still early game
+	depth = 3 if state.num_turns > 4 else 2
 	# generate move tree / get move tree from cache
 	move_tree = move_generation.generate_move_tree(state, BOARD_SIZE, curr_piece, depth)
 	root_node = move_tree[0][0] # garentee
@@ -125,16 +127,19 @@ def main():
 	# ]
 	# )
 
-	BOARD_SIZE = 7
+	BOARD_SIZE = 10
 
 	board = bytes([
-		0, 0, 0, 0, 0, 0, 0,
-		1, 0, 0, 0, 0, 0, 0,
-		0, 2, 0, 0, 0, 0, 0,
-		0, 1, 2, 1, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	])
 
 

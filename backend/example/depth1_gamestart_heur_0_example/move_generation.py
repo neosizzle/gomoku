@@ -1,5 +1,6 @@
 import grpc
 import time
+import random
 
 import game_pb2_grpc
 import game_pb2
