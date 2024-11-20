@@ -1,9 +1,21 @@
 import grpc
 import time
+import random
 
 import game_pb2_grpc
 import game_pb2
 import static_eval
+
+def measure_duration_ns(func):
+    """Decorator to measure the duration of a function in nanoseconds."""
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()  # Start timing
+        result = func(*args, **kwargs)     # Call the function
+        end_time = time.perf_counter()      # End timing
+        duration_ns = (end_time - start_time) * 1_000_000_000  # Convert to nanoseconds
+        print(f"Function '{func.__name__}' took {duration_ns:.2f} ns")
+        return result
+    return wrapper
 
 def pretty_print_board(buffer, BOARD_SIZE):
 	counter = 0
@@ -239,6 +251,47 @@ def detect_double_free_threes(input_idx, BOARD_SIZE, piece, board) -> bool :
 	  
 	return False
 
+# Detects threat formation or enemy threat defend when attempting to place a piece
+def detect_threat(input_idx, BOARD_SIZE, piece, board) -> bool :
+	# generate local expansions of current piece
+	local_expansions = expand_all_directions(input_idx, BOARD_SIZE, BOARD_SIZE)
+
+	# group pairs of directions together, assuming the results returned are
+	# 	[get_top_idx, get_btm_idx, get_left_idx, get_right_idx, get_top_left_idx, get_top_right_idx, get_btm_left_idx, get_btm_right_idx]
+	local_expansion_grouping = group_local_expansions(local_expansions)
+	print(local_expansion_grouping)
+
+	# for each grouping, extract cells
+	cell_value_buffers = []
+	group_indices = []
+	for local_expansion in local_expansion_grouping:
+		cell_values = []
+		group_idx = -1
+		for (i, expansion_index) in enumerate(local_expansion):
+			# if the current idx is more than the idx stated in expansion, 
+			# append the current value of idx at board but also make sure group idx is not empty
+			if expansion_index > input_idx and group_idx == -1:
+				cell_values.append(board[input_idx])
+				group_idx = i # the index where the the input index is located at the group 
+
+			cell_values.append(board[expansion_index])
+		
+		# sometimes this group_idx will remain -1,
+		# this means input_idx is at the border.
+		# we need to fix this since we are 
+		# still required to run checks at border placements
+		if group_idx == -1:
+			# assumine that we are placing on blank value
+			cell_values.append(board[input_idx])
+			group_idx = len(cell_values) - 1
+
+		cell_value_buffers.append(cell_values)
+		group_indices.append(group_idx) # sometimes this group_idx will remain -1, this means input_idx is at the border. This will be okay since has_free_three will return false if input_idx is at border of buffer.
+		print(f"{cell_values} {group_idx}")
+
+	
+	return False
+
 # This function will simulate the effect of placing a piece on the board, and it would return None if such 
 # a placmenet is invalid / impossible
 def place_piece_attempt(index, piece, state, BOARD_SIZE, ignore_self_captured=False) -> None | game_pb2.GameState:
@@ -375,7 +428,10 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE, ignore_self_captured=Fa
 		pass
 	
 	new_board = bytearray(board[:])
-	# place piece in empty space, TODO check for win and heuristics
+	# place piece in empty space, TODO check for heuristics
+	# TODO make a check threat function here, see if placing this piece here will defend / create
+	# a threat. If it does not, check if there is any other threats on the board and return None if there are, return the state of there arent. 
+	# If it does, place this piece in thus index
 	new_board[index] = piece
 	new_board = bytes(new_board)
 
@@ -508,13 +564,13 @@ def main():
 	board = bytes([
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 1, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 1, 1, 1, 1, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 2, 0, 0, 0,
-		0, 0, 0, 0, 0, 2, 0, 0, 0,
-		0, 0, 0, 0, 2, 2, 0, 0, 0
+		0, 0, 0, 0, 2, 0, 0, 0, 0,
+		0, 0, 0, 0, 2, 0, 2, 0, 0,
+		0, 0, 0, 0, 2, 2, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 2, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0
 	])
 
 	# p1 is 1, p2 is 2
@@ -527,8 +583,9 @@ def main():
 		time_to_think_ns=0
 	)
 
-	# print(detect_double_free_threes(59, BOARD_SIZE, 1, board))
-	# print(has_free_three([0, 0, 0, 0, 2, 0, 1, 1, 0], 1, 5))
+	# print(detect_threat(25, BOARD_SIZE, 2, board))
+	print(detect_double_free_threes(60, BOARD_SIZE, 2, board))
+	# print(has_free_three([0, 0, 0, 0, 0, 2, 2, 0, 0], 2, 7))
 	# new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
 	# if new_state is None:
 	# 	print("new state is none")
@@ -543,10 +600,10 @@ def main():
 	# 	pretty_print_board(node[0].board, BOARD_SIZE)
 	# 	print("")
 
-	possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 1, filter_endmoves=True)
-	print(f"{len(possible_moves)}")
-	for state in possible_moves:
-		pretty_print_board(state.board, BOARD_SIZE)
-		print("")
+	# possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 1, filter_endmoves=True)
+	# print(f"{len(possible_moves)}")
+	# for state in possible_moves:
+	# 	pretty_print_board(state.board, BOARD_SIZE)
+		# print("")
 
 main()

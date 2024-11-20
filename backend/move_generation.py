@@ -22,7 +22,7 @@ def get_top_idx(idx, BOARD_SIZE):
 
 def get_btm_idx(idx, BOARD_SIZE):
 	dim = (BOARD_SIZE * BOARD_SIZE)
-	if idx >= (dim - BOARD_SIZE - 1):
+	if idx > (dim - BOARD_SIZE - 1):
 		return -1
 	return idx + BOARD_SIZE
 
@@ -109,50 +109,39 @@ def group_local_expansions(local_expansions):
 # given a 1d buffer and the piece, retuen True if the buffer has a free three if idx_to_place
 # is placed with piece
 def has_free_three(buffer, piece, idx_to_place):
-	for i in range(len(buffer) - 1):
-		# if current cell is  0 and next cell is piece, init counting sequence
-		if buffer[i] == 0 and buffer[i + 1] == piece :
-			gap = 0
-			accum = 0
-			enemy_flag = False
-			if i == idx_to_place:
-				accum += 1
-			# start counting with 1 allowed gap
-			for j in range(i + 1, len(buffer)):
-				# current idx to place
-				if j == idx_to_place:
-					accum += 1
-					continue
-				# gap encountered but we already passsed another gap
-				if buffer[j] == 0 and gap != 0:
-					break
-				# enemy encountered
-				if buffer[j] != piece and buffer[j] != 0:
-					if gap == 0:
-						enemy_flag = True
-					break
-				# first gap
-				if buffer[j] == 0:
-					gap += 1
-				# our piece
-				if buffer[j] == piece:
-					accum += 1
-			# if these conditions are met, means we have a free three
-			# check for 3 pieces, idx_to_place is around the current counted piece and idx_to_place isnt at the sides
-			if accum == 3 and (idx_to_place >= i and idx_to_place <= i + 4) and idx_to_place != 0 and idx_to_place != len(buffer) - 1:
-				# check that if idx_to_place < 4, the first element is empty
-				if idx_to_place < 4 and buffer[0] != 0: 
-					return False
-				# check that if idx_to_place >= len(buffer) - 4, last element is empty 
-				if idx_to_place >= len(buffer) - 4 and buffer[-1] != 0:
-					return False
-				# got enemy
-				if enemy_flag:
-					return False
-				# check enemy_flag blind spot edge case
-				if buffer[i - 1] != piece and buffer[i - 1] != 0:
-					return False
-				return True
+	begin = 0
+	buffer_clone = buffer[:]
+
+	# return if buffer is shorter than 5, need 5 pieces for a free three
+	if len(buffer) < 5 or idx_to_place == -1:
+		return False
+	
+	buffer_clone[idx_to_place] = piece
+	while begin < len(buffer_clone):
+		end = begin + 1
+		while end < len(buffer_clone):
+			# stop traversing end pointer if we get enemy
+			if buffer_clone[end] != piece and buffer_clone[end] != 0:
+				break
+
+			# stop traversing end pointer if we hit space
+			if buffer_clone[end] == 0:
+				break
+
+			end += 1
+
+		# end pointer finished traversing, ignore if begin is at the start or end
+		# is at length of buffer end
+		if begin == 0 or end == len(buffer_clone):
+			begin = end
+			continue
+
+		# ignore if range is not in index_to_place
+		if not (idx_to_place >= begin and idx_to_place <= end) :
+			begin = end
+			continue
+
+		return (end - begin == 4) and buffer[begin] == 0 and buffer[end] == 0	
 	return False
 
 # Detects double free threes when attempting to place a piece, will return true if a double free three
@@ -178,56 +167,76 @@ def detect_double_free_threes(input_idx, BOARD_SIZE, piece, board) -> bool :
 			if expansion_index > input_idx and group_idx == -1:
 				cell_values.append(board[input_idx])
 				group_idx = i # the index where the the input index is located at the group 
-
+			
 			cell_values.append(board[expansion_index])
+			
+		# sometimes this group_idx will remain -1,
+		# this means input_idx is at the border.
+		# we need to fix this since we are 
+		# still required to run checks at border placements
+		if group_idx == -1:
+			# assumine that we are placing on blank value
+			cell_values.append(board[input_idx])
+			group_idx = len(cell_values) - 1
+		
 		cell_value_buffers.append(cell_values)
-		group_indices.append(group_idx) # sometimes this group_idx will remain -1, this means input_idx is at the border. This will be okay since has_free_three will return false if input_idx is at border of buffer.
+		group_indices.append(group_idx)
 		# print(f"{cell_values} {group_idx}")
 
 	# count valid free threes for each grouping. If valid free threes are > 1, return True
 	free_three_idx = -1
 	for (i, buffer) in enumerate(cell_value_buffers):
 		if has_free_three(buffer, piece, group_indices[i]):
+			# print(f"has_free_three({buffer}, {piece}, {group_indices[i]})")
 			if free_three_idx != -1:
 				return True
-			# print(f"has_free_three({buffer}, {piece}, {group_indices[i]})")
 			free_three_idx = i
 
 	if free_three_idx == -1:
 		return False
 
-	# for the valid three, expand all elements in that grouping and count valid free threes
-	grouping_with_ft = local_expansion_grouping[free_three_idx]
-	# print(grouping_with_ft)
-	for grouping_idx in grouping_with_ft:
-		local_expansions_ft = expand_all_directions(grouping_idx, BOARD_SIZE, BOARD_SIZE)
-		local_expansion_grouping_ft = group_local_expansions(local_expansions_ft)
+	# # for the valid three, expand all elements in that grouping and count valid free threes
+	# grouping_with_ft = local_expansion_grouping[free_three_idx]
+	# # print(grouping_with_ft)
+	# for grouping_idx in grouping_with_ft:
+	# 	local_expansions_ft = expand_all_directions(grouping_idx, BOARD_SIZE, BOARD_SIZE)
+	# 	local_expansion_grouping_ft = group_local_expansions(local_expansions_ft)
 
-		# for each grouping, extract cells
-		cell_value_buffers = []
-		group_indices = []
-		for local_expansion in local_expansion_grouping_ft:
-			cell_values = []
-			group_idx = -1 
-			for (i, expansion_index) in enumerate(local_expansion):
-				if expansion_index > grouping_idx and group_idx == -1:
-					cell_values.append(board[grouping_idx])
-					group_idx = i
+	# 	# for each grouping, extract cells
+	# 	cell_value_buffers = []
+	# 	group_indices = []
+	# 	for local_expansion in local_expansion_grouping_ft:
+	# 		cell_values = []
+	# 		group_idx = -1 
+	# 		for (i, expansion_index) in enumerate(local_expansion):
+	# 			if expansion_index > grouping_idx and group_idx == -1:
+	# 				cell_values.append(board[grouping_idx])
+	# 				group_idx = i
 
-				cell_values.append(board[expansion_index])
-			cell_value_buffers.append(cell_values)
-			group_indices.append(group_idx) # sometimes this group_idx will remain -1, this means grouping_idx is at the border. This will be okay since has_free_three will return false if grouping_idx is at border of buffer.
+	# 			cell_values.append(board[expansion_index])
 
-		# for each of those expansions. If any valid three is found besides the original buffer, return True
-		for (i, buffer) in enumerate(cell_value_buffers):
-			if free_three_idx == i:
-				continue
-			# print(f"{group_indices} {buffer} {local_expansion_grouping_ft[i]} {grouping_idx}")
-			if has_free_three(buffer, piece, group_indices[i]):
-				# print(f"\thas_free_three({buffer}, {piece}, {group_indices[i]}), {free_three_idx} {i}")
-				# print(f"{local_expansion_grouping_ft}")
-				# print(f"{cell_value_buffers}")
-				return True
+	# 		# sometimes this group_idx will remain -1,
+	# 		# this means input_idx is at the border.
+	# 		# we need to fix this since we are 
+	# 		# still required to run checks at border placements
+	# 		if group_idx == -1:
+	# 			# assumine that we are placing on blank value
+	# 			cell_values.append(board[input_idx])
+	# 			group_idx = len(cell_values) - 1
+
+	# 		cell_value_buffers.append(cell_values)
+	# 		group_indices.append(group_idx) 
+
+	# 	# for each of those expansions. If any valid three is found besides the original buffer, return True
+	# 	for (i, buffer) in enumerate(cell_value_buffers):
+	# 		if free_three_idx == i:
+	# 			continue
+	# 		# print(f"{group_indices} {buffer} {local_expansion_grouping_ft[i]} {grouping_idx}")
+	# 		if has_free_three(buffer, piece, group_indices[i]):
+	# 			# print(f"\thas_free_three({buffer}, {piece}, {group_indices[i]}), {free_three_idx} {i}")
+	# 			# print(f"{local_expansion_grouping_ft}")
+	# 			# print(f"{cell_value_buffers}")
+	# 			return True
 	  
 	return False
 

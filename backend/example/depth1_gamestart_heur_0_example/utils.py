@@ -72,7 +72,7 @@ def get_top_idx(idx, BOARD_SIZE):
 
 def get_btm_idx(idx, BOARD_SIZE):
 	dim = (BOARD_SIZE * BOARD_SIZE)
-	if idx >= (dim - BOARD_SIZE - 1):
+	if idx > (dim - BOARD_SIZE - 1):
 		return -1
 	return idx + BOARD_SIZE
 
