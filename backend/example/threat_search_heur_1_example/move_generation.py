@@ -252,7 +252,7 @@ def detect_double_free_threes(input_idx, BOARD_SIZE, piece, board) -> bool :
 	return False
 
 # Detects threat formation or enemy threat defend when attempting to place a piece
-def detect_threat(input_idx, BOARD_SIZE, piece, board) -> bool :
+def has_threat(input_idx, BOARD_SIZE, piece, board) -> bool :
 	# generate local expansions of current piece
 	local_expansions = expand_all_directions(input_idx, BOARD_SIZE, BOARD_SIZE)
 
@@ -290,6 +290,100 @@ def detect_threat(input_idx, BOARD_SIZE, piece, board) -> bool :
 		print(f"{cell_values} {group_idx}")
 
 	
+	return False
+
+# Detects threat when attempting to place a piece, will return true if a threat is formed
+def detect_threat_formation(buffer, piece, idx_to_place):
+	start_idx = idx_to_place - 1
+	end_idx = idx_to_place + 1
+	gap = False
+
+	# initial start and end idx is gap
+	if start_idx > 0:
+		if buffer[start_idx] == 0:
+			gap = False
+			start_idx -= 1
+
+	if end_idx < len(buffer):
+		if buffer[end_idx] == 0:
+			gap = False
+			end_idx += 1
+
+	# move start idx to the start of the threat sequence, gap sensitive
+	while start_idx >= 0 and buffer[start_idx] == piece:
+		# early gap detection
+		if start_idx > 1:
+			if buffer[start_idx - 1] == 0 and buffer[start_idx - 2] == piece and not gap:
+				gap = True
+				start_idx -= 1
+		start_idx -= 1
+
+	# move end_idx  to the end of the threat sequence, gap sensitive
+	while end_idx < len(buffer) and buffer[end_idx] == piece:
+		# early gap detection
+		if end_idx < len(buffer) - 2:
+			if buffer[end_idx + 1] == 0 and buffer[end_idx + 2]  == piece and not gap:
+				gap = True
+				end_idx += 1
+		end_idx += 1
+
+	start_closed = False
+	end_closed = False
+
+	# check for border and openness of the start side
+	if start_idx == -1 or buffer[start_idx] != 0:
+		start_closed = True
+
+	# check for border and openess of the end side
+	if end_idx == len(buffer) or buffer[end_idx] != 0:
+		end_closed = True
+
+	# evaluate real threat size
+	real_threat_size = end_idx - start_idx - 1
+	# print(f"real threat size {real_threat_size}, start_idx {start_idx}, end_idx {end_idx}")
+	# calculate potential threat
+	if not start_closed:
+		# this assumption should be true if start_closed is false, gap sensitive
+		while start_idx >= 0 and buffer[start_idx] == 0:
+			# early gap detection
+			if buffer[start_idx - 1] == 0 and buffer[start_idx - 2] == piece and not gap:
+				gap = True
+				start_idx -= 1
+			start_idx -= 1
+	
+	if not end_closed:
+		# this assumption should be true if end_closed is false, gap sensitive
+		while end_idx < len(buffer) and buffer[end_idx] == 0:
+			# early gap detection
+			if end_idx < len(buffer) - 2:
+				if buffer[end_idx + 1] == 0 and buffer[end_idx + 2]  == piece and not gap:
+					gap = True
+					end_idx += 1
+			end_idx += 1
+	
+	potential_theat_size = end_idx - start_idx
+	# print(f"potential_theat_size {potential_theat_size}, start_idx {start_idx}, end_idx {end_idx}")
+
+	# comparison
+	# consecutive pieces below 2 are considered neutral
+	if real_threat_size < 3:
+		print("real threat size too small")
+		return False
+	
+	# ignore empty promises
+	if potential_theat_size < 6:
+		print("potential threat size too small")
+		return False
+	
+	# we got blocked from both sides, there are no space for growth unless we already have a winning threat
+	if end_closed and start_closed and real_threat_size < 5:
+		print("threat neutralized")
+		return False
+
+	return True
+
+# Detects threat when attempting to place a piece, will return true if enemy threat is blocked 
+def detect_threat_block(buffer, piece, idx_to_place) :
 	return False
 
 # This function will simulate the effect of placing a piece on the board, and it would return None if such 
@@ -583,8 +677,20 @@ def main():
 		time_to_think_ns=0
 	)
 
-	# print(detect_threat(25, BOARD_SIZE, 2, board))
-	print(detect_double_free_threes(60, BOARD_SIZE, 2, board))
+	print(detect_threat_formation([0,0,2,0,2,0], 2, 3)) # true
+	print(detect_threat_formation([0,2,2,0,0,0], 2, 3)) # true
+	print(detect_threat_formation([2,2,0,0,0,0], 2, 2)) # true
+	print(detect_threat_formation([0,2,2,0,0,0], 2, 0)) # true
+	print(detect_threat_formation([2,0,2,0,0,0], 2, 1)) # true
+	print(detect_threat_formation([0,0,0,0,2,2], 2, 3)) # true
+	print(detect_threat_formation([0,0,0,2,2,0], 2, 5)) # true
+	print(detect_threat_formation([0,0,0,2,2,1], 2, 2)) # true
+	print(detect_threat_formation([0,0,2,2,2,0], 2, 0)) # true
+	print(detect_threat_formation([0,0,1,2,2,0], 2, 5)) # false
+	print(detect_threat_formation([0,0,2,2,1,0], 2, 1)) # false
+
+
+	# print(has_threat(25, BOARD_SIZE, 2, board))
 	# print(has_free_three([0, 0, 0, 0, 0, 2, 2, 0, 0], 2, 7))
 	# new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
 	# if new_state is None:
