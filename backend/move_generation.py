@@ -240,6 +240,163 @@ def detect_double_free_threes(input_idx, BOARD_SIZE, piece, board) -> bool :
 	  
 	return False
 
+# Detects threat formation or enemy threat defend when attempting to place a piece
+def has_threat(input_idx, BOARD_SIZE, piece, board) -> bool :
+	# generate local expansions of current piece
+	local_expansions = expand_all_directions(input_idx, BOARD_SIZE, BOARD_SIZE)
+
+	# group pairs of directions together, assuming the results returned are
+	# 	[get_top_idx, get_btm_idx, get_left_idx, get_right_idx, get_top_left_idx, get_top_right_idx, get_btm_left_idx, get_btm_right_idx]
+	local_expansion_grouping = group_local_expansions(local_expansions)
+	# print(local_expansion_grouping)
+
+	# for each grouping, extract cells
+	cell_value_buffers = []
+	group_indices = []
+	for local_expansion in local_expansion_grouping:
+		cell_values = []
+		group_idx = -1
+		for (i, expansion_index) in enumerate(local_expansion):
+			# if the current idx is more than the idx stated in expansion, 
+			# append the current value of idx at board but also make sure group idx is not empty
+			if expansion_index > input_idx and group_idx == -1:
+				cell_values.append(board[input_idx])
+				group_idx = i # the index where the the input index is located at the group 
+
+			cell_values.append(board[expansion_index])
+		
+		# sometimes this group_idx will remain -1,
+		# this means input_idx is at the border.
+		# we need to fix this since we are 
+		# still required to run checks at border placements
+		if group_idx == -1:
+			# assumine that we are placing on blank value
+			cell_values.append(board[input_idx])
+			group_idx = len(cell_values) - 1
+
+		cell_value_buffers.append(cell_values)
+		group_indices.append(group_idx) # sometimes this group_idx will remain -1, this means input_idx is at the border. This will be okay since has_free_three will return false if input_idx is at border of buffer.
+		# print(f"{cell_values} {group_idx}")
+
+	for i, cell_values in enumerate(cell_value_buffers):
+		idx_to_place = group_indices[i]
+		if detect_threat_formation(cell_values, piece, idx_to_place) or detect_threat_block(cell_values, piece, idx_to_place):
+			return True
+
+	return False
+
+# Detects threat when attempting to place a piece, will return true if a threat is formed
+def detect_threat_formation(buffer, piece, idx_to_place):
+	start_idx = idx_to_place - 1
+	end_idx = idx_to_place + 1
+	gap = False
+
+	# initial start and end idx is gap
+	if start_idx > 0:
+		if buffer[start_idx] == 0 and not gap:
+			if start_idx > 2 and buffer[start_idx - 2] == piece:
+				gap = True
+				start_idx -= 1
+
+	if end_idx < len(buffer):
+		if buffer[end_idx] == 0 and not gap:
+			if end_idx < len(buffer) - 2 and buffer[end_idx + 2] == piece:
+				gap = True
+				end_idx += 1
+
+	# move start idx to the start of the threat sequence, gap sensitive
+	while start_idx >= 0 and buffer[start_idx] == piece:
+		# early gap detection
+		if start_idx > 1:
+			if buffer[start_idx - 1] == 0 and buffer[start_idx - 2] == piece and not gap:
+				gap = True
+				start_idx -= 1
+		start_idx -= 1
+
+	# move end_idx  to the end of the threat sequence, gap sensitive
+	while end_idx < len(buffer) and buffer[end_idx] == piece:
+		# early gap detection
+		if end_idx < len(buffer) - 2:
+			if buffer[end_idx + 1] == 0 and buffer[end_idx + 2]  == piece and not gap:
+				gap = True
+				end_idx += 1
+		end_idx += 1
+
+	start_closed = False
+	end_closed = False
+
+	# check for border and openness of the start side
+	if start_idx == -1 or buffer[start_idx] != 0:
+		start_closed = True
+
+	# check for border and openess of the end side
+	if end_idx == len(buffer) or buffer[end_idx] != 0:
+		end_closed = True
+
+	# evaluate real threat size
+	real_threat_size = end_idx - start_idx - 1
+	# print(f"real threat size {real_threat_size}, start_idx {start_idx}, end_idx {end_idx}")
+	# calculate potential threat
+	if not start_closed:
+		# this assumption should be true if start_closed is false, gap sensitive
+		while start_idx >= 0 and buffer[start_idx] == 0:
+			# early gap detection
+			if buffer[start_idx - 1] == 0 and buffer[start_idx - 2] == piece and not gap:
+				gap = True
+				start_idx -= 1
+			start_idx -= 1
+	
+	if not end_closed:
+		# this assumption should be true if end_closed is false, gap sensitive
+		while end_idx < len(buffer) and buffer[end_idx] == 0:
+			# early gap detection
+			if end_idx < len(buffer) - 2:
+				if buffer[end_idx + 1] == 0 and buffer[end_idx + 2]  == piece and not gap:
+					gap = True
+					end_idx += 1
+			end_idx += 1
+	
+	potential_theat_size = end_idx - start_idx
+	# print(f"potential_theat_size {potential_theat_size}, start_idx {start_idx}, end_idx {end_idx}")
+
+	# comparison
+	# consecutive pieces below 2 are considered neutral
+	if real_threat_size < 3:
+		# print("real threat size too small")
+		return False
+	
+	# ignore empty promises
+	if potential_theat_size < 6:
+		# print("potential threat size too small")
+		return False
+	
+	# we got blocked from both sides, there are no space for growth unless we already have a winning threat
+	if end_closed and start_closed and real_threat_size < 5:
+		# print("threat neutralized")
+		return False
+
+	return True
+
+# Detects threat when attempting to place a piece, will return true if an enemy threat is blocked
+def detect_threat_block(buffer, piece, idx_to_place):
+	enemy_piece = 1 if piece == 2 else 2
+	# use detect_threat_formation to evaluate size and oritentation of threat
+	valid_threat = detect_threat_formation(buffer, enemy_piece, idx_to_place)
+	if not valid_threat:
+		return False
+	
+	# since we are defending, we dont want any gaps
+	left_idx = idx_to_place - 1
+	right_idx = idx_to_place + 1
+
+	if left_idx > 1:
+		if buffer[left_idx] == 0 and buffer[left_idx - 1] == enemy_piece:
+			return False
+	if right_idx < len(buffer) - 2:
+		if buffer[right_idx] == 0 and buffer[right_idx + 1] == enemy_piece:
+			return False
+	return True
+
 # This function will simulate the effect of placing a piece on the board, and it would return None if such 
 # a placmenet is invalid / impossible
 def place_piece_attempt(index, piece, state, BOARD_SIZE, ignore_self_captured=False) -> None | game_pb2.GameState:
@@ -376,7 +533,10 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE, ignore_self_captured=Fa
 		pass
 	
 	new_board = bytearray(board[:])
-	# place piece in empty space, TODO check for win and heuristics
+	# place piece in empty space, TODO check for heuristics
+	# TODO make a check threat function here, see if placing this piece here will defend / create
+	# a threat. If it does not, check if there is any other threats on the board and return None if there are, return the state of there arent. 
+	# If it does, place this piece in thus index
 	new_board[index] = piece
 	new_board = bytes(new_board)
 
@@ -406,7 +566,8 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 	curr_board = state.board
 	dims = BOARD_SIZE * BOARD_SIZE
 	res = []
-	indices_to_check = set() # set for no dupes
+	initial_search_indices = set() # set for no dupes
+	threat_search_indices = set() # set for no dupes
 
 	# check if state is already endgame, if yes, return none
 	if state.is_end != 0:
@@ -414,7 +575,6 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 
 	# we only select cells to fill if they are already near a piece
 	for i in range(dims):
-		# indices_to_check.add(i)
 		# ignore cells which are blank
 		if curr_board[i] == 0:
 			continue
@@ -422,7 +582,16 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 		# get all indices from all directions within a 2 depth range
 		directional_indices = sum(expand_all_directions(i, 2, BOARD_SIZE), []) # combine list results
 		for val in directional_indices:
-			indices_to_check.add(val)
+			initial_search_indices.add(val)
+
+			# add to threat_search_indices if the current index will form / block a threat
+			if has_threat(val, BOARD_SIZE, piece, state.board):
+				threat_search_indices.add(val)
+
+	# use initial search indices if we dont have any threat
+	# blocking / formining moves
+	indices_to_check = initial_search_indices if len(threat_search_indices) == 0 else threat_search_indices
+	# indices_to_check = initial_search_indices
 
 	# iterate through all cells in dimensions
 	for i in indices_to_check:
@@ -440,10 +609,9 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 		winning_moves = list(filter(lambda x: x.is_end == piece, res))
 		if len(winning_moves) > 0:
 			res = winning_moves
-	
+
 	return res
 
-@utils.measure_duration_ns
 def generate_move_tree(state: game_pb2.GameState, BOARD_SIZE: int, piece: int, depth: int) -> list[list[game_pb2.GameState | list[game_pb2.GameState]]]:
 	res = [] # adjacency list
 
@@ -511,12 +679,12 @@ def main():
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 1, 1, 1, 1, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 2, 0, 0, 0,
-		0, 0, 0, 0, 0, 2, 0, 0, 0,
-		0, 0, 0, 0, 2, 2, 0, 0, 0
+		0, 0, 0, 0, 2, 0, 0, 0, 0,
+		0, 0, 0, 0, 2, 0, 2, 0, 0,
+		0, 0, 0, 0, 2, 2, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 2, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0
 	])
 
 	# p1 is 1, p2 is 2
@@ -529,8 +697,51 @@ def main():
 		time_to_think_ns=0
 	)
 
-	# print(detect_double_free_threes(59, BOARD_SIZE, 1, board))
-	# print(has_free_three([0, 0, 0, 0, 2, 0, 1, 1, 0], 1, 5))
+	# print(detect_threat_formation([0,0,2,0,2,0], 2, 3)) # true
+	# print(detect_threat_formation([0,2,2,0,0,0], 2, 3)) # true
+	# print(detect_threat_formation([2,2,0,0,0,0], 2, 2)) # true
+	# print(detect_threat_formation([0,2,2,0,0,0], 2, 0)) # true
+	# print(detect_threat_formation([2,0,2,0,0,0], 2, 1)) # true
+	# print(detect_threat_formation([0,0,0,0,2,2], 2, 3)) # true
+	# print(detect_threat_formation([0,0,0,2,2,0], 2, 5)) # true
+	# print(detect_threat_formation([0,0,0,2,2,1], 2, 2)) # true
+	# print(detect_threat_formation([0,0,2,2,2,0], 2, 0)) # true
+	# print(detect_threat_formation([1,0,2,2,0,0], 2, 1)) # true
+	# print(detect_threat_formation([0,0,2,2,0,1], 2, 0)) # true
+	# print("")
+	# print(detect_threat_formation([0,0,1,2,2,0], 2, 5)) # false
+	# print(detect_threat_formation([0,0,2,2,1,0], 2, 1)) # false
+	# print(detect_threat_formation([1,0,2,2,0,1], 2, 1)) # false
+	# print(detect_threat_formation([0,2,0,0,0,1], 2, 0)) # false
+	# print(detect_threat_formation([0,0,0,2,0,1], 2, 0)) # false
+	# print(detect_threat_formation([0,0,0,0,0,0], 2, 2)) # false
+	# print(detect_threat_formation([0,0,0,2,0,0], 2, 2)) # false
+
+
+	# print(detect_threat_block([0,0,2,0,2,0], 1, 3)) # true
+	# print(detect_threat_block([0,2,2,0,0,0], 1, 3)) # true
+	# print(detect_threat_block([2,2,0,0,0,0], 1, 2)) # true
+	# print(detect_threat_block([0,2,2,0,0,0], 1, 0)) # true
+	# print(detect_threat_block([2,0,2,0,0,0], 1, 1)) # true
+	# print(detect_threat_block([0,0,0,0,2,2], 1, 3)) # true
+	# print(detect_threat_block([0,0,0,2,2,0], 1, 5)) # true
+	# print(detect_threat_block([0,0,0,2,2,1], 1, 2)) # true
+	# print(detect_threat_block([1,0,2,2,0,0], 1, 1)) # true
+	# print("")
+	# print(detect_threat_block([0,0,2,2,2,0], 1, 0)) # false 
+	# print(detect_threat_block([0,0,2,2,0,1], 1, 0)) # false
+	# print(detect_threat_block([0,0,1,2,2,0], 1, 5)) # false
+	# print(detect_threat_block([0,0,2,2,1,0], 1, 1)) # false
+	# print(detect_threat_block([1,0,2,2,0,1], 1, 1)) # false
+	# print(detect_threat_block([0,2,0,0,0,1], 1, 0)) # false
+	# print(detect_threat_block([0,0,0,2,0,1], 1, 0)) # false
+
+
+	# for i in range(BOARD_SIZE * BOARD_SIZE):
+	# 	if board[i] == 0:
+	# 		print(f"{has_threat(i, BOARD_SIZE, 1, board)} at {i}")
+
+	# print(has_free_three([0, 0, 0, 0, 0, 2, 2, 0, 0], 2, 7))
 	# new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
 	# if new_state is None:
 	# 	print("new state is none")
@@ -538,17 +749,17 @@ def main():
 	# 	pretty_print_board(new_state.board, BOARD_SIZE)
 	# 	print(f"{new_state}")
 
-	# move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 3)
-	# print(f"{len(move_tree)}")
+	move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 3)
+	print(f"{len(move_tree)}")
 	
 	# for node in move_tree:
 	# 	pretty_print_board(node[0].board, BOARD_SIZE)
 	# 	print("")
 
-	possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 1, filter_endmoves=False)
-	print(f"{len(possible_moves)}")
-	for state in possible_moves:
-		pretty_print_board(state.board, BOARD_SIZE)
-		print("")
+	# possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 1, filter_endmoves=True)
+	# print(f"{len(possible_moves)}")
+	# for state in possible_moves:
+	# 	pretty_print_board(state.board, BOARD_SIZE)
+		# print("")
 
 # main()
