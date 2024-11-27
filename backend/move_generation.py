@@ -1,10 +1,21 @@
 import grpc
 import time
+import random
 
 import game_pb2_grpc
 import game_pb2
 import static_eval
-import utils
+
+def measure_duration_ns(func):
+    """Decorator to measure the duration of a function in nanoseconds."""
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()  # Start timing
+        result = func(*args, **kwargs)     # Call the function
+        end_time = time.perf_counter()      # End timing
+        duration_ns = (end_time - start_time) * 1_000_000_000  # Convert to nanoseconds
+        print(f"Function '{func.__name__}' took {duration_ns:.2f} ns")
+        return result
+    return wrapper
 
 def pretty_print_board(buffer, BOARD_SIZE):
 	counter = 0
@@ -582,24 +593,27 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 		# get all indices from all directions within a 2 depth range
 		directional_indices = sum(expand_all_directions(i, 2, BOARD_SIZE), []) # combine list results
 		for val in directional_indices:
+			# ignore cells which are occupied
+			if curr_board[val] != 0:
+				continue
+
 			initial_search_indices.add(val)
 
 			# add to threat_search_indices if the current index will form / block a threat
 			if has_threat(val, BOARD_SIZE, piece, state.board):
+				# print(f"has_threat({val}, BOARD_SIZE, {piece}, board)")
 				threat_search_indices.add(val)
 
 	# use initial search indices if we dont have any threat
 	# blocking / formining moves
 	indices_to_check = initial_search_indices if len(threat_search_indices) == 0 else threat_search_indices
-	# indices_to_check = initial_search_indices
+	# indices_to_check = initial_search_indices # this is without threat search space
+	# print(f"len(threat_search_indices) {len(threat_search_indices)}")
 
 	# iterate through all cells in dimensions
 	for i in indices_to_check:
-		# ignore cells which are occupied
-		if curr_board[i] != 0:
-			continue
 
-		# attempt ro place piece in empty space. If such a piece is not valid
+		# attempt to place piece in empty space. If such a piece is not valid
 		# do not add the move into the result array
 		game_state = place_piece_attempt(i, piece, state, BOARD_SIZE, ignore_self_captured=True)
 		if game_state is not None:
@@ -678,12 +692,12 @@ def main():
 	board = bytes([
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 2, 0, 0, 0, 0,
-		0, 0, 0, 0, 2, 0, 2, 0, 0,
-		0, 0, 0, 0, 2, 2, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 2, 0, 0,
+		1, 0, 0, 0, 2, 0, 0, 0, 0,
+		2, 0, 1, 0, 0, 0, 0, 0, 0,
+		2, 0, 0, 0, 0, 0, 0, 0, 0,
+		2, 0, 0, 0, 0, 0, 0, 0, 0,
+		1, 0, 0, 0, 0, 1, 0, 0, 0,
+		2, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0
 	])
 
@@ -735,7 +749,6 @@ def main():
 	# print(detect_threat_block([1,0,2,2,0,1], 1, 1)) # false
 	# print(detect_threat_block([0,2,0,0,0,1], 1, 0)) # false
 	# print(detect_threat_block([0,0,0,2,0,1], 1, 0)) # false
-
 
 	# for i in range(BOARD_SIZE * BOARD_SIZE):
 	# 	if board[i] == 0:
