@@ -1,0 +1,19 @@
+plugins {
+    id("java")
+}
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation(
+            'io.grpc:grpc-protobuf:1.68.2'
+    )
+    implementation project(':interfaces')
+    testImplementation(platform("org.junit:junit-bom:5.10.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+}
+
+tasks.test {
+    useJUnitPlatform()
+}

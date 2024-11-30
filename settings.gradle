@@ -1,0 +1,6 @@
+rootProject.name = 'Gomoku'
+include(':gomoku_java')
+include(':interfaces')
+
+project(':gomoku_java').projectDir = file('gomoku_java')
+project(':interfaces').projectDir = file('interfaces')
