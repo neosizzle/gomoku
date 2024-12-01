@@ -66,10 +66,24 @@
                 -1px 1px 0 black,
                 1px 1px 0 black;
         }
+
+        h1 {
+            text-transform: uppercase;
+        }
+
     </style>
 </head>
 <body>
-    <h1>Gomoku Game</h1>
+    <h1>Gomoku Game {{mode}} {{variant}} </h1>
+
+    <div>
+        Player 1 captures <span id="p1_captures">0</span>
+    </div>
+
+    <div>
+        Player 2 captures <span id="p2_captures">0</span>
+    </div>
+    
     <table id="board">
         {% for y in range(board_size) %}
         <tr>
@@ -117,6 +131,21 @@
                 .then(response => response.json())
                 .then(data => {
                     const board = data.board;
+                    const p1_captures = data.p1_captures
+                    const p2_captures = data.p2_captures
+                    const is_end = data.is_end
+
+                    // TODO reset state once my game reached end
+                    console.log(is_end)
+                    if (is_end != 0)
+                    {
+                        alert("GAME OVER: PLAYER " + is_end + " WON")
+                    }
+
+                    // set capture count
+                    document.getElementById("p1_captures").textContent = p1_captures
+                    document.getElementById("p2_captures").textContent = p2_captures
+
                     const cells = document.querySelectorAll('#board td');
                     cells.forEach(cell => {
                         const x = parseInt(cell.getAttribute('data-x')); // 0-based index for x

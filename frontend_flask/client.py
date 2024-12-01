@@ -7,14 +7,22 @@ import static_eval
 
 class GomokuClient:
 	def __init__(self):
-		self.app = Flask('game_app', template_folder='./backend/templates')
+		self.app = Flask('game_app', template_folder='./frontend_flask/templates')
 		self.channel = grpc.insecure_channel('localhost:50051')
 		self.stub = game_pb2_grpc.GameStub(self.channel)
 		self.board_size = 9
-		self.meta = self.stub.GetGameMeta(game_pb2.Empty())
+		self.meta = self.stub.GetGameMeta(game_pb2.Empty()) # TODO: should we decrecate this?
 		self.game_state = self.stub.GetLastGameState(game_pb2.Empty())
 		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
-		self.app.add_url_rule('/', 'index', self.index)
+		self.mode = None
+		self.variant = None
+
+		# Render endpoints
+		self.app.add_url_rule('/', 'index', self.render_index)
+		self.app.add_url_rule('/game', 'game', self.render_game)
+
+		# State retrival / modification endpoints
+		self.app.add_url_rule('/set_config', 'set_config', self.set_config, methods=['POST'])
 		self.app.add_url_rule('/move', 'move', self.move, methods=['POST'])
 		self.app.add_url_rule('/board', 'get_board', self.get_board)
 
@@ -37,12 +45,37 @@ class GomokuClient:
 					return True
 		return False
 
-	def index(self):
-		return render_template('test.html', board=self.board, board_size=self.board_size)
+	def render_index(self):
+		return render_template('index.html')
+
+	def render_game(self):
+		# TODO evaluators wont check error handling for uninit values right??
+		return render_template('game.html',
+						board=self.board,
+						board_size=self.board_size,
+						mode = self.mode,
+						variant = self.variant
+						)
+
+	def set_config(self):
+		variant = request.form['variant']
+		mode = request.form['mode']
+		# TODO call to backend to set game meta
+
+		self.mode = mode
+		self.variant = variant
+		return jsonify(status=200)
 
 	def get_board(self):
-		return jsonify(board=self.board)
+		return jsonify(
+			board=self.board,
+			p1_captures=self.game_state.p1_captures,
+			p2_captures=self.game_state.p2_captures,
+			is_end = self.game_state.is_end
+			)
 
+	# Make a player move in AI mode and expect
+	# an AI move in response
 	def move(self):
 		x = int(request.form['x'])
 		y = int(request.form['y'])
@@ -124,6 +157,15 @@ class GomokuClient:
 			
 		self.game_state.board = bytes(board_copy)
 		self.game_state.num_turns += 1
+
+		# check win from calling player here. Dont need to wait for 
+		# ai to return move. 
+		# TODO test this
+		# TODO: skip this process if pvp
+		if static_eval.check_win_condition(self.board_size, self.game_state, 1, self.game_state.p1_captures) :
+			self.game_state.is_end = 1
+			return jsonify(status=200)
+
 	
 		print("suggesting next move for")
 		utils.pretty_print_board(board_copy, self.board_size)
