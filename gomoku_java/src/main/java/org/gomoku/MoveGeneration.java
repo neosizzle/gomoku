@@ -1,0 +1,489 @@
+package org.gomoku;
+
+
+import com.google.protobuf.ByteString;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
+public class MoveGeneration {
+
+    public static List<List<Integer>> expandAllDirections(int idx, int depth) {
+        List<List<Integer>> res = new ArrayList<>();
+        List<Function<Integer, Integer>> dirFns = List.of(StaticEvaluation::getTopIdx, StaticEvaluation::getBtmIdx, StaticEvaluation::getLeftIdx, StaticEvaluation::getRightIdx,
+                StaticEvaluation::getTopLeftIdx, StaticEvaluation::getTopRightIdx, StaticEvaluation::getBtmLeftIdx, StaticEvaluation::getBtmRightIdx);
+
+        for (Function<Integer, Integer> dir : dirFns) {
+            int lastDirRes = idx;
+            List<Integer> curr = new ArrayList<>();
+            for (int i = 0; i < depth; i++) {
+                int newDirRes = dir.apply(lastDirRes);
+                if (newDirRes == -1) break;
+                curr.add(newDirRes);
+                lastDirRes = newDirRes;
+            }
+            res.add(curr);
+        }
+        return res;
+    }
+
+    // Checks if a capture is made by placing curr_piece at idx
+    public static boolean checkCaptureMadeDir(Function<Integer, Integer> directionFn, int idx, int boardSize, int currPiece, byte[] board) {
+        int checkCellIdx = directionFn.apply(idx);
+        int checkCell = board[checkCellIdx];
+
+        if (checkCell > 0 && checkCell != currPiece) {
+            checkCellIdx = directionFn.apply(checkCellIdx);
+            checkCell = board[checkCellIdx];
+
+            if (checkCell > 0 && checkCell != currPiece) {
+                checkCellIdx = directionFn.apply(checkCellIdx);
+                checkCell = board[checkCellIdx];
+
+                return checkCell == currPiece;
+            }
+        }
+        return false;
+    }
+
+    // Group local expansions
+    public static List<List<Integer>> groupLocalExpansions(List<List<Integer>> localExpansions) {
+        List<List<Integer>> res = new ArrayList<>();
+
+        res.add(concatReverse(localExpansions.get(0), localExpansions.get(1)));
+        res.add(concatReverse(localExpansions.get(2), localExpansions.get(3)));
+        res.add(concatReverse(localExpansions.get(4), localExpansions.get(7)));
+        res.add(concatReverse(localExpansions.get(5), localExpansions.get(6)));
+
+        return res;
+    }
+
+    // Helper method to concatenate two lists with the first list reversed
+    private static List<Integer> concatReverse(List<Integer> list1, List<Integer> list2) {
+        List<Integer> result = new ArrayList<>(list1);
+        for (int i = list2.size() - 1; i >= 0; i--) {
+            result.add(list2.get(i));
+        }
+        return result;
+    }
+
+    // Check if a buffer has a free three for the given piece
+    public static boolean hasFreeThree(List<Byte> buffer, int piece, int idxToPlace) {
+        if (buffer.size() < 5 || idxToPlace == -1) {
+            return false;
+        }
+
+        List<Byte> bufferClone = new ArrayList<>(buffer);
+        bufferClone.set(idxToPlace, piece);
+        int begin = 0;
+
+        while (begin < bufferClone.size()) {
+            int end = begin + 1;
+            while (end < bufferClone.size()) {
+                if (bufferClone.get(end) != piece && bufferClone.get(end) != 0) {
+                    break;
+                }
+                if (bufferClone.get(end) == 0) {
+                    break;
+                }
+                end++;
+            }
+
+            if (begin == 0 || end == bufferClone.size()) {
+                begin = end;
+                continue;
+            }
+
+            if (!(idxToPlace >= begin && idxToPlace <= end)) {
+                begin = end;
+                continue;
+            }
+
+            if (end - begin == 4 && bufferClone.get(begin) == 0 && bufferClone.get(end) == 0) {
+                return true;
+            }
+            begin = end;
+        }
+
+        return false;
+    }
+
+    // Detect double free threes when placing a piece
+    public static boolean detectDoubleFreeThrees(int inputIdx, int BOARD_SIZE, int piece, byte[] board) {
+        List<List<Integer>> localExpansions = expandAllDirections(inputIdx, BOARD_SIZE);
+        List<List<Integer>> localExpansionGrouping = groupLocalExpansions(localExpansions);
+
+        List<List<Byte>> cellValueBuffers = new ArrayList<>();
+        List<Integer> groupIndices = new ArrayList<>();
+
+        for (List<Integer> localExpansion : localExpansionGrouping) {
+            List<Byte> cellValues = new ArrayList<>();
+            int groupIdx = -1;
+
+            for (int i = 0; i < localExpansion.size(); i++) {
+                int expansionIndex = localExpansion.get(i);
+
+                if (expansionIndex > inputIdx && groupIdx == -1) {
+                    cellValues.add(board[inputIdx]);
+                    groupIdx = i;
+                }
+
+                cellValues.add(board[expansionIndex]);
+            }
+
+            if (groupIdx == -1) {
+                cellValues.add(board[inputIdx]);
+                groupIdx = cellValues.size() - 1;
+            }
+
+            cellValueBuffers.add(cellValues);
+            groupIndices.add(groupIdx);
+        }
+
+        int freeThreeIdx = -1;
+        for (int i = 0; i < cellValueBuffers.size(); i++) {
+            List<Byte> buffer = cellValueBuffers.get(i);
+            if (hasFreeThree(buffer, piece, groupIndices.get(i))) {
+                if (freeThreeIdx != -1) {
+                    return true;
+                }
+                freeThreeIdx = i;
+            }
+        }
+
+        return false;
+    }
+
+    public static boolean hasThreat(int inputIdx, int BOARD_SIZE, int piece, byte[] board) {
+        // Generate local expansions of current piece
+        List<List<Byte>> localExpansions = expandAllDirections(inputIdx, BOARD_SIZE);
+
+        // Group pairs of directions together
+        List<List<Integer>> localExpansionGrouping = groupLocalExpansions(localExpansions);
+
+        List<List<Integer>> cellValueBuffers = new ArrayList<>();
+        List<Integer> groupIndices = new ArrayList<>();
+
+        for (List<Integer> localExpansion : localExpansionGrouping) {
+            List<Integer> cellValues = new ArrayList<>();
+            int groupIdx = -1;
+            for (int i = 0; i < localExpansion.size(); i++) {
+                int expansionIndex = localExpansion.get(i);
+
+                // If the current idx is more than the idx stated in expansion
+                if (expansionIndex > inputIdx && groupIdx == -1) {
+                    cellValues.add(board[inputIdx]);
+                    groupIdx = i; // the index where the input index is located at the group
+                }
+
+                cellValues.add(board[expansionIndex]);
+            }
+
+            // Fix for border placements
+            if (groupIdx == -1) {
+                cellValues.add(board[inputIdx]);
+                groupIdx = cellValues.size() - 1;
+            }
+
+            cellValueBuffers.add(cellValues);
+            groupIndices.add(groupIdx);
+        }
+
+        // Check if a threat formation or threat block is detected
+        for (int i = 0; i < cellValueBuffers.size(); i++) {
+            List<Integer> cellValues = cellValueBuffers.get(i);
+            int idxToPlace = groupIndices.get(i);
+            if (detectThreatFormation(cellValues, piece, idxToPlace) || detectThreatBlock(cellValues, piece, idxToPlace)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Detects threat formation when attempting to place a piece
+    public static boolean detectThreatFormation(List<Integer> buffer, int piece, int idxToPlace) {
+        int startIdx = idxToPlace - 1;
+        int endIdx = idxToPlace + 1;
+        boolean gap = false;
+
+        // Initial gap detection for startIdx and endIdx
+        if (startIdx >= 0 && buffer.get(startIdx) == 0 && !gap) {
+            if (startIdx > 2 && buffer.get(startIdx - 2) == piece) {
+                gap = true;
+                startIdx--;
+            }
+        }
+
+        if (endIdx < buffer.size() && buffer.get(endIdx) == 0 && !gap) {
+            if (endIdx < buffer.size() - 2 && buffer.get(endIdx + 2) == piece) {
+                gap = true;
+                endIdx++;
+            }
+        }
+
+        // Move startIdx to the start of the threat sequence, gap sensitive
+        while (startIdx >= 0 && buffer.get(startIdx) == piece) {
+            // Early gap detection
+            if (startIdx > 1) {
+                if (buffer.get(startIdx - 1) == 0 && buffer.get(startIdx - 2) == piece && !gap) {
+                    gap = true;
+                    startIdx--;
+                }
+            }
+            startIdx--;
+        }
+
+        // Move endIdx to the end of the threat sequence, gap sensitive
+        while (endIdx < buffer.size() && buffer.get(endIdx) == piece) {
+            // Early gap detection
+            if (endIdx < buffer.size() - 2) {
+                if (buffer.get(endIdx + 1) == 0 && buffer.get(endIdx + 2) == piece && !gap) {
+                    gap = true;
+                    endIdx++;
+                }
+            }
+            endIdx++;
+        }
+
+        boolean startClosed = startIdx == -1 || buffer.get(startIdx) != 0;
+        boolean endClosed = endIdx == buffer.size() || buffer.get(endIdx) != 0;
+
+        // Evaluate real threat size
+        int realThreatSize = endIdx - startIdx - 1;
+
+        // Calculate potential threat size
+        if (!startClosed) {
+            while (startIdx >= 0 && buffer.get(startIdx) == 0) {
+                if (buffer.get(startIdx - 1) == 0 && buffer.get(startIdx - 2) == piece && !gap) {
+                    gap = true;
+                    startIdx--;
+                }
+                startIdx--;
+            }
+        }
+
+        if (!endClosed) {
+            while (endIdx < buffer.size() && buffer.get(endIdx) == 0) {
+                if (endIdx < buffer.size() - 2) {
+                    if (buffer.get(endIdx + 1) == 0 && buffer.get(endIdx + 2) == piece && !gap) {
+                        gap = true;
+                        endIdx++;
+                    }
+                }
+                endIdx++;
+            }
+        }
+
+        int potentialThreatSize = endIdx - startIdx;
+
+        // Comparison
+        if (realThreatSize < 3) {
+            return false;
+        }
+
+        if (potentialThreatSize < 6) {
+            return false;
+        }
+
+        return !startClosed || !endClosed || realThreatSize >= 5;
+    }
+
+    // Detects threat when attempting to place a piece, returns true if an enemy threat is blocked
+    public static boolean detectThreatBlock(List<Integer> buffer, int piece, int idxToPlace) {
+        int enemyPiece = (piece == 1) ? 2 : 1;
+        boolean validThreat = detectThreatFormation(buffer, enemyPiece, idxToPlace);
+        if (!validThreat) {
+            return false;
+        }
+
+        // Since we are defending, no gaps should be allowed
+        int leftIdx = idxToPlace - 1;
+        int rightIdx = idxToPlace + 1;
+
+        if (leftIdx > 1) {
+            if (buffer.get(leftIdx) == 0 && buffer.get(leftIdx - 1) == enemyPiece) {
+                return false;
+            }
+        }
+
+        if (rightIdx < buffer.size() - 2) {
+            return buffer.get(rightIdx) != 0 || buffer.get(rightIdx + 1) != enemyPiece;
+        }
+
+        return true;
+    }
+
+    public static GameOuterClass.GameState placePieceAttempt(int index, int piece, GameOuterClass.GameState state, int BOARD_SIZE, boolean ignoreSelfCaptured) {
+        byte[] board = state.getBoard().toByteArray();
+
+        // Validate if the board index is empty
+        if (board[index] != 0) {
+            return null;
+        }
+
+        // Validate if placing this piece violates the double free three rule
+        if (detectDoubleFreeThrees(index, BOARD_SIZE, piece, board)) {
+            return null;
+        }
+
+        // Validate if placing such a piece will capture an opponent
+        List<Boolean> capturedValidationRes = new ArrayList<>();
+        List<Function<Integer,Integer>> fnMappings = List.of(
+                StaticEvaluation::getBtmIdx,
+                StaticEvaluation::getTopIdx,
+                StaticEvaluation::getLeftIdx,
+                StaticEvaluation::getRightIdx,
+                StaticEvaluation::getBtmLeftIdx,
+                StaticEvaluation::getTopRightIdx,
+                StaticEvaluation::getTopLeftIdx,
+                StaticEvaluation::getBtmRightIdx
+        );
+
+        for (var fnMapping : fnMappings) {
+            capturedValidationRes.add(checkCaptureMadeDir(fnMapping, index, BOARD_SIZE, piece, board));
+        }
+
+        List<Integer> weCapturedIndices = new ArrayList<>();
+        for (int i = 0; i < capturedValidationRes.size(); i++) {
+            if (capturedValidationRes.get(i)) {
+                weCapturedIndices.add(i);
+            }
+        }
+
+        if (!weCapturedIndices.isEmpty()) {
+            byte[] newBoard = board.clone();
+            newBoard[index] = (byte) piece;
+            int newP1Captures = (int) state.getP1Captures();
+            int newP2Captures = (int) state.getP2Captures();
+
+            for (int weCapturedIdx : weCapturedIndices) {
+
+                // Determine the direction of capture
+                int idx1 = fnMappings.get(weCapturedIdx).apply(index);
+                int idx2 = fnMappings.get(weCapturedIdx).apply(idx1);
+
+                newBoard[idx1] = 0;
+                newBoard[idx2] = 0;
+                if (piece == 1) {
+                    newP1Captures++;
+                } else {
+                    newP2Captures++;
+                }
+            }
+
+            GameOuterClass.GameState gameState = GameOuterClass.GameState.newBuilder().setBoard(ByteString.copyFrom(newBoard))
+                    .setP1Captures(newP1Captures)
+                    .setP2Captures(newP2Captures)
+                    .setNumTurns(state.getNumTurns() + 1)
+                    .build();
+
+            // Check for win condition
+            int isEnd = 0;
+            if (piece == 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 1, newP1Captures)) {
+                isEnd = 1;
+            }
+            if (piece == 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 2, newP2Captures)) {
+                isEnd = 2;
+            }
+
+            gameState = gameState.toBuilder().setIsEnd(isEnd).build();
+
+            return gameState;
+        }
+
+        // Validate if placing such a piece will get myself captured
+        capturedValidationRes.clear();
+        List<FunctionPair> newMappings = List.of(
+                new FunctionPair(StaticEvaluation::getBtmIdx, StaticEvaluation::getTopIdx),
+                new FunctionPair(StaticEvaluation::getTopIdx, StaticEvaluation::getBtmIdx),
+                new FunctionPair(StaticEvaluation::getLeftIdx, StaticEvaluation::getRightIdx),
+                new FunctionPair(StaticEvaluation::getRightIdx, StaticEvaluation::getLeftIdx),
+                new FunctionPair(StaticEvaluation::getBtmLeftIdx, StaticEvaluation::getTopRightIdx),
+                new FunctionPair(StaticEvaluation::getTopRightIdx, StaticEvaluation::getBtmLeftIdx),
+                new FunctionPair(StaticEvaluation::getTopLeftIdx, StaticEvaluation::getBtmRightIdx),
+                new FunctionPair(StaticEvaluation::getBtmRightIdx, StaticEvaluation::getTopLeftIdx)
+        );
+        for (FunctionPair functionPair : newMappings) {
+            capturedValidationRes.add(StaticEvaluation.validateNoCapDirection(functionPair.fnc1, functionPair.fnc2, index, BOARD_SIZE, piece, board));
+        }
+
+        try {
+            int weGotCapturedIdx = capturedValidationRes.indexOf(false);
+
+            // If we want to ignore self capture, return null
+            if (ignoreSelfCaptured) {
+                return null;
+            }
+
+            // Determine the direction of capture
+            var mapFunc = newMappings.get(weGotCapturedIdx);
+
+            // Turn the neighbour cell into blank and increase capture
+            byte[] newBoard = board.clone();
+            newBoard[mapFunc.fnc1.apply(index)] = 0;
+            newBoard = newBoard.clone();
+
+            int newP1Captures = (int) state.getP1Captures();
+            int newP2Captures = (int) state.getP2Captures();
+
+            if (piece == 1) {
+                newP1Captures++;
+            } else {
+                newP2Captures++;
+            }
+
+            GameOuterClass.GameState gameState = GameOuterClass.GameState.newBuilder().setBoard(ByteString.copyFrom(newBoard))
+                    .setP1Captures(newP1Captures)
+                    .setP2Captures(newP2Captures)
+                    .setNumTurns(state.getNumTurns() + 1)
+                    .build();
+
+            // Check for win condition
+            int isEnd = 0;
+            if (piece == 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 1, newP1Captures)) {
+                isEnd = 1;
+            }
+            if (piece == 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 2, newP2Captures)) {
+                isEnd = 2;
+            }
+
+            gameState = gameState.toBuilder().setIsEnd(isEnd).build();
+
+            return gameState;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // Place piece in empty space, TODO: check for heuristics
+        byte[] newBoard = board.clone();
+        newBoard[index] = (byte) piece;
+        newBoard = newBoard.clone();
+
+
+        GameOuterClass.GameState newGameState = GameOuterClass.GameState.newBuilder().setBoard(ByteString.copyFrom(newBoard))
+                .setP1Captures(state.getP1Captures())
+                .setP2Captures(state.getP2Captures())
+                .setNumTurns(state.getNumTurns() + 1)
+                .build();
+
+        // Check for win condition
+        int isEnd = 0;
+        if (piece == 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newGameState, 1, (int) state.getP1Captures())) {
+            isEnd = 1;
+        }
+        if (piece == 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newGameState, 2, (int) state.getP2Captures())) {
+            isEnd = 2;
+        }
+
+        newGameState = newGameState.toBuilder().setIsEnd(isEnd).build();
+        return newGameState;
+    }
+
+    private record FunctionPair(Function<Integer, Integer> fnc1, Function<Integer, Integer> fnc2) {
+
+    }
+}

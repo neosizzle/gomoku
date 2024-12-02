@@ -1,6 +1,5 @@
 package org.gomoku;
 
-import com.gomoku.interfaces.GameOuterClass;
 import com.google.protobuf.ByteString;
 
 import java.util.ArrayList;
@@ -340,19 +339,17 @@ public class StaticEvaluation {
             int idx,
             int boardSize,
             int currPiece,
-            ByteString board
+            byte[] board
     ) {
         int checkCellIdx = directionFn.apply(idx);
-        int checkCell = board.byteAt(checkCellIdx);
+        int checkCell = board[checkCellIdx];
 
         // Check if the cell in the given direction is the current piece
         if (checkCell == currPiece) {
-            int checkNeighCell = board.byteAt(directionFn.apply(checkCellIdx));
+            int checkNeighCell = board[(directionFn.apply(checkCellIdx))];
             if (checkNeighCell != currPiece && checkNeighCell != 0) {
-                int antiDirectCell = board.byteAt(antiDirectionFn.apply(idx));
-                if (antiDirectCell != currPiece && antiDirectCell != 0) {
-                    return false;
-                }
+                int antiDirectCell = board[(antiDirectionFn.apply(idx))];
+                return antiDirectCell == currPiece || antiDirectCell == 0;
             }
         }
         return true;
@@ -418,11 +415,11 @@ public class StaticEvaluation {
         finalScore -= enemyCaptures * 2;
 
         // Kill shot
-        if (checkWinCondition(boardSize, gameState, 1, gameState.getP1Captures())) {
+        if (checkWinCondition(boardSize, gameState, 1, (int) gameState.getP1Captures())) {
             finalScore += (ourPiece == 1) ? 6969 : -6969;
         }
 
-        if (checkWinCondition(boardSize, gameState, 2, gameState.getP2Captures())) {
+        if (checkWinCondition(boardSize, gameState, 2, (int) gameState.getP2Captures())) {
             finalScore += (ourPiece == 2) ? 6969 : -6969;
         }
 
