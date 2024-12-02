@@ -25,6 +25,7 @@ class GomokuClient:
 		self.app.add_url_rule('/set_config', 'set_config', self.set_config, methods=['POST'])
 		self.app.add_url_rule('/move', 'move', self.move, methods=['POST'])
 		self.app.add_url_rule('/board', 'get_board', self.get_board)
+		self.app.add_url_rule('/reset', 'reset', self.reset, methods=['POST'])
 
 	# returns true if a capture is possible by me if i place curr_piece in idx
 	def check_capture_made_dir(self, direction_fn, idx, board):
@@ -74,6 +75,14 @@ class GomokuClient:
 			is_end = self.game_state.is_end
 			)
 
+	def reset(self):
+		self.meta = self.stub.GetGameMeta(game_pb2.Empty()) # TODO: should we decrecate this?
+		self.game_state = self.stub.GetLastGameState(game_pb2.Empty())
+		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
+		self.mode = None
+		self.variant = None
+		return jsonify(status=200)
+	
 	# Make a player move in AI mode and expect
 	# an AI move in response
 	def move(self):
@@ -160,8 +169,7 @@ class GomokuClient:
 
 		# check win from calling player here. Dont need to wait for 
 		# ai to return move. 
-		# TODO test this
-		# TODO: skip this process if pvp
+		# TODO: make pvp move function
 		if static_eval.check_win_condition(self.board_size, self.game_state, 1, self.game_state.p1_captures) :
 			self.game_state.is_end = 1
 			return jsonify(status=200)

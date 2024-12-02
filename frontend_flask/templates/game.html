@@ -71,6 +71,13 @@
             text-transform: uppercase;
         }
 
+        #main-menu {
+            text-decoration: underline;
+            cursor: pointer;
+            color: blue;
+            font-size: 21px;
+        }
+
     </style>
 </head>
 <body>
@@ -101,7 +108,14 @@
         </tr>
         {% endfor %}
     </table>    
+
+    <div id="main-menu">
+        Main menu
+    </div>
+
     <script>
+
+        // Table cell click
         document.querySelectorAll('td').forEach(cell => {
             cell.addEventListener('click', function() {
                 const x = this.getAttribute('data-x');
@@ -126,6 +140,7 @@
             });
         });
 
+        // Retrieve data from backend to update rendered board
         function updateGameBoard() {
             fetch('/board')
                 .then(response => response.json())
@@ -135,11 +150,11 @@
                     const p2_captures = data.p2_captures
                     const is_end = data.is_end
 
-                    // TODO reset state once my game reached end
-                    console.log(is_end)
                     if (is_end != 0)
                     {
                         alert("GAME OVER: PLAYER " + is_end + " WON")
+                        reset_and_redirect()
+                        return
                     }
 
                     // set capture count
@@ -156,6 +171,7 @@
                 .catch(error => console.error('Error fetching board:', error));
         }
 
+        // Helper fnction to update board cell
         function updateCell(cell, value) {
             if (value == 0) {
                 cell.innerHTML = '&nbsp;';
@@ -165,6 +181,23 @@
                 cell.innerHTML = '<span class="white-dot">&#9675;</span>';
             }
         }
+
+        // Reset state in backend and redirects to root endpoint
+        function reset_and_redirect() {
+            fetch('/reset', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                window.location.href = "/"
+            })
+            .catch(error => {
+                alert("POST /reset error")
+                console.error('Error reset board:', error);
+            });
+        }
+
+        document.getElementById('main-menu').addEventListener('click', () => reset_and_redirect())
     </script>
 </body>
 </html>
