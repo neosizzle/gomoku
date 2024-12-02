@@ -3,18 +3,21 @@ package org.gomoku;
 
 import com.google.protobuf.ByteString;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 public class MoveGeneration {
 
     public static List<List<Integer>> expandAllDirections(int idx, int depth) {
         List<List<Integer>> res = new ArrayList<>();
-        List<Function<Integer, Integer>> dirFns = List.of(StaticEvaluation::getTopIdx, StaticEvaluation::getBtmIdx, StaticEvaluation::getLeftIdx, StaticEvaluation::getRightIdx,
-                StaticEvaluation::getTopLeftIdx, StaticEvaluation::getTopRightIdx, StaticEvaluation::getBtmLeftIdx, StaticEvaluation::getBtmRightIdx);
+        List<Function<Integer, Integer>> dirFns = List.of(StaticEvaluation::getTopIdx,
+                StaticEvaluation::getBtmIdx,
+                StaticEvaluation::getLeftIdx,
+                StaticEvaluation::getRightIdx,
+                StaticEvaluation::getTopLeftIdx,
+                StaticEvaluation::getTopRightIdx,
+                StaticEvaluation::getBtmLeftIdx,
+                StaticEvaluation::getBtmRightIdx);
 
         for (Function<Integer, Integer> dir : dirFns) {
             int lastDirRes = idx;
@@ -71,7 +74,7 @@ public class MoveGeneration {
     }
 
     // Check if a buffer has a free three for the given piece
-    public static boolean hasFreeThree(List<Byte> buffer, int piece, int idxToPlace) {
+    public static boolean hasFreeThree(List<Byte> buffer, byte piece, int idxToPlace) {
         if (buffer.size() < 5 || idxToPlace == -1) {
             return false;
         }
@@ -112,7 +115,7 @@ public class MoveGeneration {
     }
 
     // Detect double free threes when placing a piece
-    public static boolean detectDoubleFreeThrees(int inputIdx, int BOARD_SIZE, int piece, byte[] board) {
+    public static boolean detectDoubleFreeThrees(int inputIdx, int BOARD_SIZE, byte piece, byte[] board) {
         List<List<Integer>> localExpansions = expandAllDirections(inputIdx, BOARD_SIZE);
         List<List<Integer>> localExpansionGrouping = groupLocalExpansions(localExpansions);
 
@@ -157,18 +160,18 @@ public class MoveGeneration {
         return false;
     }
 
-    public static boolean hasThreat(int inputIdx, int BOARD_SIZE, int piece, byte[] board) {
+    public static boolean hasThreat(int inputIdx, int BOARD_SIZE, byte piece, byte[] board) {
         // Generate local expansions of current piece
-        List<List<Byte>> localExpansions = expandAllDirections(inputIdx, BOARD_SIZE);
+        List<List<Integer>> localExpansions = expandAllDirections(inputIdx, BOARD_SIZE);
 
         // Group pairs of directions together
         List<List<Integer>> localExpansionGrouping = groupLocalExpansions(localExpansions);
 
-        List<List<Integer>> cellValueBuffers = new ArrayList<>();
+        List<List<Byte>> cellValueBuffers = new ArrayList<>();
         List<Integer> groupIndices = new ArrayList<>();
 
         for (List<Integer> localExpansion : localExpansionGrouping) {
-            List<Integer> cellValues = new ArrayList<>();
+            List<Byte> cellValues = new ArrayList<>();
             int groupIdx = -1;
             for (int i = 0; i < localExpansion.size(); i++) {
                 int expansionIndex = localExpansion.get(i);
@@ -182,7 +185,6 @@ public class MoveGeneration {
                 cellValues.add(board[expansionIndex]);
             }
 
-            // Fix for border placements
             if (groupIdx == -1) {
                 cellValues.add(board[inputIdx]);
                 groupIdx = cellValues.size() - 1;
@@ -194,7 +196,7 @@ public class MoveGeneration {
 
         // Check if a threat formation or threat block is detected
         for (int i = 0; i < cellValueBuffers.size(); i++) {
-            List<Integer> cellValues = cellValueBuffers.get(i);
+            List<Byte> cellValues = cellValueBuffers.get(i);
             int idxToPlace = groupIndices.get(i);
             if (detectThreatFormation(cellValues, piece, idxToPlace) || detectThreatBlock(cellValues, piece, idxToPlace)) {
                 return true;
@@ -205,7 +207,7 @@ public class MoveGeneration {
     }
 
     // Detects threat formation when attempting to place a piece
-    public static boolean detectThreatFormation(List<Integer> buffer, int piece, int idxToPlace) {
+    public static boolean detectThreatFormation(List<Byte> buffer, int piece, int idxToPlace) {
         int startIdx = idxToPlace - 1;
         int endIdx = idxToPlace + 1;
         boolean gap = false;
@@ -293,7 +295,7 @@ public class MoveGeneration {
     }
 
     // Detects threat when attempting to place a piece, returns true if an enemy threat is blocked
-    public static boolean detectThreatBlock(List<Integer> buffer, int piece, int idxToPlace) {
+    public static boolean detectThreatBlock(List<Byte> buffer, int piece, int idxToPlace) {
         int enemyPiece = (piece == 1) ? 2 : 1;
         boolean validThreat = detectThreatFormation(buffer, enemyPiece, idxToPlace);
         if (!validThreat) {
@@ -317,7 +319,7 @@ public class MoveGeneration {
         return true;
     }
 
-    public static GameOuterClass.GameState placePieceAttempt(int index, int piece, GameOuterClass.GameState state, int BOARD_SIZE, boolean ignoreSelfCaptured) {
+    public static GameOuterClass.GameState placePieceAttempt(int index, byte piece, GameOuterClass.GameState state, int BOARD_SIZE, boolean ignoreSelfCaptured) {
         byte[] board = state.getBoard().toByteArray();
 
         // Validate if the board index is empty
@@ -481,6 +483,108 @@ public class MoveGeneration {
 
         newGameState = newGameState.toBuilder().setIsEnd(isEnd).build();
         return newGameState;
+    }
+
+    public static List<GameOuterClass.GameState> generatePossibleMoves(GameOuterClass.GameState state, int boardSize, byte piece, boolean filterEndMoves) {
+        byte[] currBoard = state.getBoard().toByteArray(); // Assuming `getBoard()` returns a 1D array representation
+        int dims = boardSize * boardSize;
+        List<GameOuterClass.GameState> result = new ArrayList<>();
+        Set<Integer> initialSearchIndices = new HashSet<>();
+        Set<Integer> threatSearchIndices = new HashSet<>();
+
+        // Check if the game is already in an end state
+        if (state.getIsEnd() != 0) {
+            return result;
+        }
+
+        // Identify possible cells for moves
+        for (int i = 0; i < dims; i++) {
+            if (currBoard[i] == 0) {
+                continue;
+            }
+
+            // Get all indices in a 2-cell range in all directions
+            List<List<Integer>> directionalIndices = expandAllDirections(i, 2);
+            for (List<Integer> valList : directionalIndices) {
+                for (int val : valList) {
+                    if (currBoard[val] != 0) {
+                        continue;
+                    }
+
+                    initialSearchIndices.add(val);
+
+                    // Add to threat indices if placing here forms/blocks a threat
+                    if (hasThreat(val, boardSize, piece, currBoard)) {
+                        threatSearchIndices.add(val);
+                    }
+                }
+            }
+        }
+
+        // Use threat indices if available; otherwise, use initial search indices
+        Set<Integer> indicesToCheck = !threatSearchIndices.isEmpty() ? threatSearchIndices : initialSearchIndices;
+
+        for (int i : indicesToCheck) {
+            GameOuterClass.GameState newState = placePieceAttempt(i, piece, state, boardSize, true); // Assuming ignoreSelfCaptured is true
+            if (newState != null) {
+                result.add(newState);
+            }
+        }
+
+        // Filter for winning moves if required
+        if (filterEndMoves) {
+            List<GameOuterClass.GameState> winningMoves = new ArrayList<>();
+            for (GameOuterClass.GameState move : result) {
+                if (move.getIsEnd() == piece) {
+                    winningMoves.add(move);
+                }
+            }
+            if (!winningMoves.isEmpty()) {
+                return winningMoves;
+            }
+        }
+
+        return result;
+    }
+
+    public static List<List<Object>> generateMoveTree(GameOuterClass.GameState state, int boardSize,  byte piece, int depth) {
+        List<List<Object>> result = new ArrayList<>();
+
+        for (int i = 0; i < depth; i++) {
+            byte currPiece = (i % 0x02 == 0) ? piece : (byte) (piece == 0x01 ? 0x02 : 0x01);
+
+            // Generate first depth
+            if (result.isEmpty()) {
+                List<GameOuterClass.GameState> rootChildren = generatePossibleMoves(state, boardSize, currPiece, true);
+                result.add(Arrays.asList(state, rootChildren));
+
+                for (GameOuterClass.GameState child : rootChildren) {
+                    result.add(Arrays.asList(child, null));
+                }
+            } else {
+                List<List<GameOuterClass.GameState>> newLeaves = new ArrayList<>();
+
+                // Find leaves and generate their children
+                for (int j = 0; j < result.size(); j++) {
+                    List<Object> node = result.get(j);
+                    if (node.get(1) == null) {
+                        GameOuterClass.GameState leafState = (GameOuterClass.GameState) node.get(0);
+                        List<GameOuterClass.GameState> leafChildren = generatePossibleMoves(leafState, boardSize, currPiece, true);
+                        node.set(1, leafChildren);
+                        newLeaves.add(leafChildren);
+                    }
+                }
+
+                // Add new leaves to the result
+                for (List<GameOuterClass.GameState> leafList : newLeaves) {
+                    for (GameOuterClass.GameState leaf : leafList) {
+                        result.add(Arrays.asList(leaf, null));
+                    }
+                }
+            }
+        }
+
+        return result;
     }
 
     private record FunctionPair(Function<Integer, Integer> fnc1, Function<Integer, Integer> fnc2) {

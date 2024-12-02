@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gomoku Game</title>
+    <style>
+		div {
+			cursor: pointer;
+			font-size: 42px;
+		}
+
+		div:hover {
+			color: red;
+			text-decoration: underline;
+		}
+    </style>
+</head>
+<body>
+    <h1>
+		Welcome to my game EVALUATORS
+	</h1>
+
+	<!--TODO: insert commision art here-->
+
+	<!--TODO: add win check -->
+
+	<div id="pvp-normal">
+		PVP normal
+	</div>
+
+	<div id="pvp-pro">
+		PVP pro
+	</div>
+
+	<div id="pve-normal">
+		PVE normal
+	</div>
+
+	<div id="pve-pro">
+		PVE pro
+	</div>
+   
+    <script>
+		document.getElementById('pvp-normal').addEventListener('click', () => {
+			fetch('/set_config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: "variant=normal&mode=pvp"
+                })
+                .then(response => response.json())
+                .then(data => {
+					window.location.href = '/game';
+                })
+                .catch(error => {
+					alert("POST /set_config error")
+					console.error('Error:', error)
+				});
+		})
+
+		document.getElementById('pvp-pro').addEventListener('click', () => {
+			fetch('/set_config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: "variant=pro&mode=pvp"
+                })
+                .then(response => response.json())
+                .then(data => {
+					window.location.href = '/game';
+                })
+                .catch(error => {
+					alert("POST /set_config error")
+					console.error('Error:', error)
+				});
+		})
+
+		document.getElementById('pve-normal').addEventListener('click', () => {
+			fetch('/set_config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: "variant=normal&mode=pve"
+                })
+                .then(response => response.json())
+                .then(data => {
+					window.location.href = '/game';
+                })
+                .catch(error => {
+					alert("POST /set_config error")
+					console.error('Error:', error)
+				});
+		})
+
+		document.getElementById('pve-pro').addEventListener('click', () => {
+			fetch('/set_config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: "variant=pro&mode=pve"
+                })
+                .then(response => response.json())
+                .then(data => {
+					window.location.href = '/game';
+                })
+                .catch(error => {
+					alert("POST /set_config error")
+					console.error('Error:', error)
+				});
+		})
+    </script>
+</body>
+</html>
