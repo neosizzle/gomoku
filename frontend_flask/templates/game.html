@@ -71,7 +71,7 @@
             text-transform: uppercase;
         }
 
-        #main-menu {
+        #main-menu, #suggest-move {
             text-decoration: underline;
             cursor: pointer;
             color: blue;
@@ -90,6 +90,10 @@
     <div>
         Player 2 captures <span id="p2_captures">0</span>
     </div>
+
+    <div>
+        Turn <span id="num_turns">0</span>
+    </div>
     
     <table id="board">
         {% for y in range(board_size) %}
@@ -107,19 +111,38 @@
             {% endfor %}
         </tr>
         {% endfor %}
-    </table>    
+    </table>
+
+    {% if mode == "pvp" %}
+    <div id="suggest-move">
+        Suggest move
+    </div>
+    {% endif %}
 
     <div id="main-menu">
         Main menu
     </div>
 
     <script>
+        let resolved_move = true
 
         // Table cell click
         document.querySelectorAll('td').forEach(cell => {
             cell.addEventListener('click', function() {
+                if (resolved_move == false) {
+                    console.log("resolve move lock")
+                    return
+                }
+                resolved_move = false
+
                 const x = this.getAttribute('data-x');
                 const y = this.getAttribute('data-y');
+
+                // Reject move if current cell is not empty
+                if (this.innerHTML.includes("span")){
+                    resolved_move = true
+                    return
+                }
 
                 fetch('/move', {
                     method: 'POST',
@@ -132,6 +155,7 @@
                 .then(data => {
                     if (data.status) { 
                         updateGameBoard(); 
+                        resolved_move = true
                     } else {
                         console.log("Invalid move or game over.");
                     }
@@ -149,6 +173,7 @@
                     const p1_captures = data.p1_captures
                     const p2_captures = data.p2_captures
                     const is_end = data.is_end
+                    const num_turns = data.num_turns
 
                     if (is_end != 0)
                     {
@@ -156,6 +181,9 @@
                         reset_and_redirect()
                         return
                     }
+
+                    // set turn counter
+                    document.getElementById("num_turns").textContent = num_turns
 
                     // set capture count
                     document.getElementById("p1_captures").textContent = p1_captures

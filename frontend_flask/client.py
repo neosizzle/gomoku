@@ -24,6 +24,7 @@ class GomokuClient:
 		# State retrival / modification endpoints
 		self.app.add_url_rule('/set_config', 'set_config', self.set_config, methods=['POST'])
 		self.app.add_url_rule('/move', 'move', self.move, methods=['POST'])
+		self.app.add_url_rule('/move_pvp', 'move_pvp', self.move, methods=['POST'])
 		self.app.add_url_rule('/board', 'get_board', self.get_board)
 		self.app.add_url_rule('/reset', 'reset', self.reset, methods=['POST'])
 
@@ -72,7 +73,8 @@ class GomokuClient:
 			board=self.board,
 			p1_captures=self.game_state.p1_captures,
 			p2_captures=self.game_state.p2_captures,
-			is_end = self.game_state.is_end
+			is_end = self.game_state.is_end,
+			num_turns = self.game_state.num_turns
 			)
 
 	def reset(self):
@@ -81,6 +83,9 @@ class GomokuClient:
 		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
 		self.mode = None
 		self.variant = None
+
+		self.stub.Reset(game_pb2.Empty())
+
 		return jsonify(status=200)
 	
 	# Make a player move in AI mode and expect
@@ -89,7 +94,7 @@ class GomokuClient:
 		x = int(request.form['x'])
 		y = int(request.form['y'])
 		index = y * self.board_size + x  # Convert to 1D index
-		
+
 		# capture checking here
 		board_copy = bytearray(self.game_state.board[:])
 		
@@ -129,6 +134,7 @@ class GomokuClient:
 				board_copy[idx2] = 0
 				self.game_state.p1_captures += 1
 
+  		# validate if placing such a piece will get us captured 
 		captured_validation_res = []
 		fn_mappings = [
 			(0, utils.get_btm_idx, utils.get_top_idx),
