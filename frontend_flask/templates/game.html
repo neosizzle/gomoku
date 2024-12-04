@@ -78,17 +78,23 @@
             font-size: 21px;
         }
 
+        #turn-display {
+            display: flex;
+            justify-content: center;
+            font-size: 19px;
+        }
+
     </style>
 </head>
 <body>
     <h1>Gomoku Game {{mode}} {{variant}} </h1>
 
     <div>
-        Player 1 captures <span id="p1_captures">0</span>
+        (Black) Player 1 captures <span id="p1_captures">0</span>
     </div>
 
     <div>
-        Player 2 captures <span id="p2_captures">0</span>
+        (White) Player 2 captures <span id="p2_captures">0</span>
     </div>
 
     <div>
@@ -114,6 +120,9 @@
     </table>
 
     {% if mode == "pvp" %}
+    <div id="turn-display">
+        Current turn: Player &nbsp; <span id="turn-display-player">1</span>
+    </div>
     <div id="suggest-move">
         Suggest move
     </div>
@@ -125,6 +134,7 @@
 
     <script>
         let resolved_move = true
+        let current_player_pvp = 1
 
         // Table cell click
         document.querySelectorAll('td').forEach(cell => {
@@ -144,23 +154,50 @@
                     return
                 }
 
-                fetch('/move', {
+                const mode = "{{mode}}"
+                
+                if (mode == "pve") 
+                {
+                    fetch('/move', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
                     body: `x=${x}&y=${y}`
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status) { 
-                        updateGameBoard(); 
-                        resolved_move = true
-                    } else {
-                        console.log("Invalid move or game over.");
-                    }
-                })
-                .catch(error => console.error('Error:', error));
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status) { 
+                            updateGameBoard(); 
+                            resolved_move = true
+                        } else {
+                            console.log("Invalid move or game over.");
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));                    
+                }
+                else {
+                    fetch('/move_pvp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `x=${x}&y=${y}&piece=${current_player_pvp}`
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status) { 
+                            updateGameBoard();
+                            if (current_player_pvp == 1) { current_player_pvp = 2 }
+                            else { current_player_pvp = 1 }
+                            document.getElementById('turn-display-player').innerHTML= current_player_pvp
+                            resolved_move = true
+                        } else {
+                            console.log("Invalid move or game over.");
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));    
+                }
             });
         });
 
@@ -175,13 +212,6 @@
                     const is_end = data.is_end
                     const num_turns = data.num_turns
 
-                    if (is_end != 0)
-                    {
-                        alert("GAME OVER: PLAYER " + is_end + " WON")
-                        reset_and_redirect()
-                        return
-                    }
-
                     // set turn counter
                     document.getElementById("num_turns").textContent = num_turns
 
@@ -195,8 +225,18 @@
                         const y = parseInt(cell.getAttribute('data-y')); // 0-based index for y
                         updateCell(cell, board[y][x]);
                     });
+
+                    // check game end
+                    if (is_end != 0)
+                    {
+                        setTimeout(() => {
+                            alert("GAME OVER: PLAYER " + is_end + " WON")
+                            reset_and_redirect()
+                        }, 1);
+                    }
                 })
                 .catch(error => console.error('Error fetching board:', error));
+        
         }
 
         // Helper fnction to update board cell

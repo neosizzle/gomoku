@@ -24,26 +24,26 @@ class GomokuClient:
 		# State retrival / modification endpoints
 		self.app.add_url_rule('/set_config', 'set_config', self.set_config, methods=['POST'])
 		self.app.add_url_rule('/move', 'move', self.move, methods=['POST'])
-		self.app.add_url_rule('/move_pvp', 'move_pvp', self.move, methods=['POST'])
+		self.app.add_url_rule('/move_pvp', 'move_pvp', self.move_pvp, methods=['POST'])
 		self.app.add_url_rule('/board', 'get_board', self.get_board)
 		self.app.add_url_rule('/reset', 'reset', self.reset, methods=['POST'])
 
 	# returns true if a capture is possible by me if i place curr_piece in idx
-	def check_capture_made_dir(self, direction_fn, idx, board):
+	def check_capture_made_dir(self, direction_fn, idx, board, our_piece):
 		check_cell_idx = direction_fn(idx, self.board_size)
 		check_cell = board[check_cell_idx]
 		# gets cell at direction_fn, if its enemy
-		if check_cell > 0 and check_cell != 1:
+		if check_cell > 0 and check_cell != our_piece:
 			# gets cell at direction_fn again
 			check_cell_idx = direction_fn(check_cell_idx, self.board_size)
 			check_cell = board[check_cell_idx]
 			# if its still enemy
-			if check_cell > 0 and check_cell != 1:
+			if check_cell > 0 and check_cell != our_piece:
 				# gets cell at direction_fn again
 				check_cell_idx = direction_fn(check_cell_idx, self.board_size)
 				check_cell = board[check_cell_idx]
 				# if its ally
-				if check_cell == 1:
+				if check_cell == our_piece:
 					return True
 		return False
 
@@ -110,14 +110,14 @@ class GomokuClient:
 			(6, utils.get_top_left_idx),
 			(7, utils.get_btm_right_idx)
 		]
-		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[0][1], index, board_copy))
-		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[1][1], index, board_copy))
-		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[2][1], index, board_copy))
-		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[3][1], index, board_copy))
-		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[4][1], index, board_copy))
-		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[5][1], index, board_copy))
-		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[6][1], index, board_copy))
-		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[7][1], index, board_copy))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[0][1], index, board_copy, 1))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[1][1], index, board_copy, 1))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[2][1], index, board_copy, 1))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[3][1], index, board_copy, 1))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[4][1], index, board_copy, 1))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[5][1], index, board_copy, 1))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[6][1], index, board_copy, 1))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[7][1], index, board_copy, 1))
 		we_captured_indices = []
 		for (idx, elem) in enumerate(captured_validation_res):
 			if elem is True:
@@ -170,14 +170,15 @@ class GomokuClient:
 		else:
 			board_copy[index] = 1 # we are player 1, AI is 2
 			
+		# apply new changes to board and increment turn count
 		self.game_state.board = bytes(board_copy)
 		self.game_state.num_turns += 1
 
 		# check win from calling player here. Dont need to wait for 
 		# ai to return move. 
-		# TODO: make pvp move function
 		if static_eval.check_win_condition(self.board_size, self.game_state, 1, self.game_state.p1_captures) :
 			self.game_state.is_end = 1
+			self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
 			return jsonify(status=200)
 
 	
@@ -186,6 +187,110 @@ class GomokuClient:
 
 		next_move_state = self.stub.SuggestNextMove(self.game_state)
 		self.game_state = next_move_state
+
+		# print("suggested")
+		# utils.pretty_print_board(self.game_state.board, self.board_size)
+		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
+		return jsonify(status=200)
+
+	# Make a player move in Pvp mode
+	def move_pvp(self):
+		x = int(request.form['x'])
+		y = int(request.form['y'])
+		our_piece = int(request.form['piece'])
+		enemy_piece = 2
+		if our_piece == 2:
+			enemy_piece = 1
+		index = y * self.board_size + x  # Convert to 1D index
+
+		# capture checking here
+		board_copy = bytearray(self.game_state.board[:])
+
+		# validate if placing such a piece will capture opponenet
+		captured_validation_res = []
+		fn_mappings = [
+			(0, utils.get_btm_idx),
+			(1, utils.get_top_idx),
+			(2, utils.get_left_idx),
+			(3, utils.get_right_idx),
+			(4, utils.get_btm_left_idx),
+			(5, utils.get_top_right_idx),
+			(6, utils.get_top_left_idx),
+			(7, utils.get_btm_right_idx)
+		]
+
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[0][1], index, board_copy, our_piece))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[1][1], index, board_copy, our_piece))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[2][1], index, board_copy, our_piece))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[3][1], index, board_copy, our_piece))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[4][1], index, board_copy, our_piece))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[5][1], index, board_copy, our_piece))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[6][1], index, board_copy, our_piece))
+		captured_validation_res.append(self.check_capture_made_dir(fn_mappings[7][1], index, board_copy, our_piece))
+		we_captured_indices = []
+		for (idx, elem) in enumerate(captured_validation_res):
+			if elem is True:
+				we_captured_indices.append(idx)
+		if len(we_captured_indices) > 0:
+			for we_captured_idx in we_captured_indices:
+				# determine the direction of capture
+				fn_mapping = fn_mappings[we_captured_idx]
+
+				# turn neighbour cell into blank, fill curr blank and increase capture
+				idx1 = fn_mapping[1](index, self.board_size)
+				idx2 = fn_mapping[1](idx1, self.board_size)
+				board_copy[idx1] = 0
+				board_copy[idx2] = 0
+				self.game_state.p1_captures += 1
+		
+		# validate if placing such a piece will get us captured 
+		captured_validation_res = []
+		fn_mappings = [
+			(0, utils.get_btm_idx, utils.get_top_idx),
+			(1, utils.get_top_idx, utils.get_btm_idx),
+			(2, utils.get_left_idx, utils.get_right_idx),
+			(3, utils.get_right_idx, utils.get_left_idx),
+			(4, utils.get_btm_left_idx, utils.get_top_right_idx),
+			(5, utils.get_top_right_idx, utils.get_btm_left_idx),
+			(6, utils.get_top_left_idx, utils.get_btm_right_idx),
+			(7, utils.get_btm_right_idx, utils.get_top_left_idx)
+		]
+
+		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[0][1], fn_mappings[0][2], index, self.board_size, our_piece, board_copy))
+		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[1][1], fn_mappings[1][2], index, self.board_size, our_piece, board_copy))
+		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[2][1], fn_mappings[2][2], index, self.board_size, our_piece, board_copy))
+		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[3][1], fn_mappings[3][2], index, self.board_size, our_piece, board_copy))
+		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[4][1], fn_mappings[4][2], index, self.board_size, our_piece, board_copy))
+		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[5][1], fn_mappings[5][2], index, self.board_size, our_piece, board_copy))
+		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[6][1], fn_mappings[6][2], index, self.board_size, our_piece, board_copy))
+		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[7][1], fn_mappings[7][2], index, self.board_size, our_piece, board_copy))
+
+		we_got_captured = False in captured_validation_res
+		if we_got_captured:
+			we_got_captured_idx = captured_validation_res.index(False)
+			
+			# determine the direction of capture
+			fn_mapping = fn_mappings[we_got_captured_idx]
+
+			new_board = bytearray(board_copy[:])
+			new_board[fn_mapping[1](index, self.board_size)] = 0
+			board_copy = bytes(new_board)
+			self.game_state.p2_captures += 1
+		else:
+			board_copy[index] = our_piece
+			
+		# apply new changes to board and increment turn count
+		self.game_state.board = bytes(board_copy)
+		self.game_state.num_turns += 1
+
+		# check win from calling player here.
+		our_captures = self.game_state.p1_captures
+		if our_piece == 2:
+			our_captures = self.game_state.p2_captures
+		if static_eval.check_win_condition(self.board_size, self.game_state, our_piece, our_captures) :
+			self.game_state.is_end = our_piece
+			self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
+			return jsonify(status=200)
 
 		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
 		return jsonify(status=200)
