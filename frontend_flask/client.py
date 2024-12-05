@@ -23,6 +23,7 @@ class GomokuClient:
 
 		# State retrival / modification endpoints
 		self.app.add_url_rule('/set_config', 'set_config', self.set_config, methods=['POST'])
+		self.app.add_url_rule('/suggest_move', 'suggest_move', self.suggest_move, methods=['POST'])
 		self.app.add_url_rule('/move', 'move', self.move, methods=['POST'])
 		self.app.add_url_rule('/move_pvp', 'move_pvp', self.move_pvp, methods=['POST'])
 		self.app.add_url_rule('/board', 'get_board', self.get_board)
@@ -192,6 +193,29 @@ class GomokuClient:
 		# utils.pretty_print_board(self.game_state.board, self.board_size)
 		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
 		return jsonify(status=200)
+
+	def suggest_move(self):
+		curr_piece = 1 if self.game_state.num_turns % 2 == 0 else 2
+
+		print("suggesting next move for")
+		board_copy = bytearray(self.game_state.board[:])
+		utils.pretty_print_board(board_copy, self.board_size)
+
+		if self.game_state.num_turns == 0:
+			print("Opening is not set yet, not suggesting any move")
+			return jsonify(status=200, index=-1)
+
+		suggested_state = self.stub.SuggestNextMove(self.game_state)
+		print("suggested")
+		utils.pretty_print_board(suggested_state.board, self.board_size)
+		res = -1
+		for (idx, elem) in enumerate(suggested_state.board):
+			if elem == curr_piece:
+				if board_copy[idx] != curr_piece:
+					res = idx
+					break
+
+		return jsonify(status=200, index=res)
 
 	# Make a player move in Pvp mode
 	def move_pvp(self):
