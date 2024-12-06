@@ -67,6 +67,22 @@
                 1px 1px 0 black;
         }
 
+        .grey-dot {
+            font-size: 36px;
+            color: grey;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            opacity: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; /* Prevent interaction */
+            text-shadow: 
+                -1px -1px 0 black,
+                1px -1px 0 black,
+                -1px 1px 0 black,
+                1px 1px 0 black;
+        }
+
         h1 {
             text-transform: uppercase;
         }
@@ -78,17 +94,23 @@
             font-size: 21px;
         }
 
+        #turn-display {
+            display: flex;
+            justify-content: center;
+            font-size: 19px;
+        }
+
     </style>
 </head>
 <body>
     <h1>Gomoku Game {{mode}} {{variant}} </h1>
 
     <div>
-        Player 1 captures <span id="p1_captures">0</span>
+        (Black) Player 1 captures <span id="p1_captures">0</span>
     </div>
 
     <div>
-        Player 2 captures <span id="p2_captures">0</span>
+        (White) Player 2 captures <span id="p2_captures">0</span>
     </div>
 
     <div>
@@ -104,6 +126,7 @@
                     &nbsp; 
                 {% elif board[y][x] == 1 %}
                     <span class="black-dot">&#9679;</span>
+
                 {% elif board[y][x] == 2 %}
                     <span class="white-dot">&#9675;</span>
                 {% endif %}
@@ -114,6 +137,9 @@
     </table>
 
     {% if mode == "pvp" %}
+    <div id="turn-display">
+        Current turn: Player &nbsp; <span id="turn-display-player">1</span>
+    </div>
     <div id="suggest-move">
         Suggest move
     </div>
@@ -125,6 +151,7 @@
 
     <script>
         let resolved_move = true
+        let current_player_pvp = 1
 
         // Table cell click
         document.querySelectorAll('td').forEach(cell => {
@@ -138,29 +165,70 @@
                 const x = this.getAttribute('data-x');
                 const y = this.getAttribute('data-y');
 
+                // iterate through table to remove any suggested move cells
+                table_rows = document.getElementById("board").children[0].children
+                for (let y_idx = 0; y_idx < table_rows.length; y_idx++) {
+                    const row = table_rows[y_idx];
+                    row_cols = row.children
+                    for (let x_idx = 0; x_idx < row_cols.length; x_idx++) {
+                        const col = row_cols[x_idx];
+                        if (col.innerHTML.includes("grey-dot"))
+                        {
+                            col.innerHTML = ""
+                        }
+                    }
+                }
+
                 // Reject move if current cell is not empty
                 if (this.innerHTML.includes("span")){
                     resolved_move = true
                     return
                 }
 
-                fetch('/move', {
+                const mode = "{{mode}}"
+                
+                if (mode == "pve") 
+                {
+                    fetch('/move', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
                     body: `x=${x}&y=${y}`
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status) { 
-                        updateGameBoard(); 
-                        resolved_move = true
-                    } else {
-                        console.log("Invalid move or game over.");
-                    }
-                })
-                .catch(error => console.error('Error:', error));
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status) { 
+                            updateGameBoard(); 
+                            resolved_move = true
+                        } else {
+                            console.log("Invalid move or game over.");
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));                    
+                }
+                else {
+                    fetch('/move_pvp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `x=${x}&y=${y}&piece=${current_player_pvp}`
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status) { 
+                            updateGameBoard();
+                            if (current_player_pvp == 1) { current_player_pvp = 2 }
+                            else { current_player_pvp = 1 }
+                            document.getElementById('turn-display-player').innerHTML= current_player_pvp
+                            resolved_move = true
+                        } else {
+                            console.log("Invalid move or game over.");
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));    
+                }
             });
         });
 
@@ -175,13 +243,6 @@
                     const is_end = data.is_end
                     const num_turns = data.num_turns
 
-                    if (is_end != 0)
-                    {
-                        alert("GAME OVER: PLAYER " + is_end + " WON")
-                        reset_and_redirect()
-                        return
-                    }
-
                     // set turn counter
                     document.getElementById("num_turns").textContent = num_turns
 
@@ -195,8 +256,18 @@
                         const y = parseInt(cell.getAttribute('data-y')); // 0-based index for y
                         updateCell(cell, board[y][x]);
                     });
+
+                    // check game end
+                    if (is_end != 0)
+                    {
+                        setTimeout(() => {
+                            alert("GAME OVER: PLAYER " + is_end + " WON")
+                            reset_and_redirect()
+                        }, 1);
+                    }
                 })
                 .catch(error => console.error('Error fetching board:', error));
+        
         }
 
         // Helper fnction to update board cell
@@ -224,8 +295,41 @@
                 console.error('Error reset board:', error);
             });
         }
-
         document.getElementById('main-menu').addEventListener('click', () => reset_and_redirect())
+
+        // Suggest move from AI
+        function suggest_move() {
+            fetch('/suggest_move', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                const index = data.index
+                const suggested_y = Math.floor(data.index / parseInt("{{board_size}}"))
+                const suggested_x = data.index % parseInt("{{board_size}}")
+
+                alert(`suggested y ${suggested_y} suggested x ${suggested_x}`)
+                
+                // update UI here
+                table_rows = document.getElementById("board").children[0].children
+                for (let y_idx = 0; y_idx < table_rows.length; y_idx++) {
+                    const row = table_rows[y_idx];
+                    if (y_idx == suggested_y) {
+                        row_cols = row.children
+                        for (let x_idx = 0; x_idx < row_cols.length; x_idx++) {
+                            const col = row_cols[x_idx];
+                            if (x_idx == suggested_x) {
+                                col.innerHTML = '<span class="grey-dot">&#9679;</span>'
+                            }
+                        }
+                    }
+                }
+                
+            })
+            .catch(error => console.error('Error:', error));    
+        }
+        document.getElementById('suggest-move').addEventListener('click', () => suggest_move())
+
     </script>
 </body>
 </html>

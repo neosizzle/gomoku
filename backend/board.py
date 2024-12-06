@@ -26,9 +26,11 @@ class GomokuGame(game_pb2_grpc.GameServicer):
 		return game_pb2.Empty()
 
 	def SuggestNextMove(self, game_state, context):
-		suggested_state = minimax.basic_minimax(game_state, self.size, 2, 2)
-		self.current_player = 1
-		return suggested_state
+		if game_state.num_turns % 2 != 0:
+			return minimax.basic_minimax(game_state, self.size, 2, 2)
+		else:
+			return minimax.basic_minimax(game_state, self.size, 1, 1)
+
 
 	def updateState(self, game_state):
 		self.board = self.decode_board(game_state.board)
@@ -42,6 +44,7 @@ class GomokuGame(game_pb2_grpc.GameServicer):
 	def decode_board(self, board_bytes):
 		return [b for b in board_bytes]
 
+	# This is not used 
 	def get_game_state(self):
 		board_bytes = self.encode_board()
 		return game_pb2.GameState(
