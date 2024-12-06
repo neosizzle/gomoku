@@ -1,22 +1,20 @@
 package org.gomoku;
 
+import game.GameOuterClass;
+
 import java.util.List;
 
 public class Minimax {
-
-    static int alpha = (int) Double.NEGATIVE_INFINITY;
-    static int beta = (int) Double.POSITIVE_INFINITY;
-
     public static int minimaxEval(
-            List<List<GameOuterClass.GameState>> moveTree,
+            List<List<Object>> moveTree,
             GameOuterClass.GameState currState,
-            int boardSize,
+            int BOARD_SIZE,
             boolean isMax,
             int maxPiece,
             int currDepth,
             int alpha,
-            int beta
-    ) {
+            int beta) {
+
         int ourPiece = maxPiece;  // maxPiece is our piece
         int enemyPiece = (ourPiece == 1) ? 2 : 1;
 
@@ -26,9 +24,12 @@ public class Minimax {
         // Check if the current state exists in the move tree
         int stateNodeIndex = -1;
         for (int i = 0; i < moveTree.size(); i++) {
-            List<GameOuterClass.GameState> node = moveTree.get(i);
-            if (node.get(1) == null) continue;
-            if (node.get(0).getBoard().equals(currState.getBoard())) {
+            List<Object> node = moveTree.get(i);
+            if (node.get(1) == null) {
+                continue;
+            }
+            GameOuterClass.GameState nodeState = (GameOuterClass.GameState) node.get(0);
+            if (nodeState.getBoard().equals(currState.getBoard()) && ((List<?>) node.get(1)).size() > 0) {
                 stateNodeIndex = i;
                 break;
             }
@@ -36,20 +37,20 @@ public class Minimax {
 
         // If no valid state found, perform static evaluation
         if (stateNodeIndex == -1) {
-            return StaticEvaluation.staticEval(boardSize, currState, ourPiece, enemyPiece, ourCaptures, enemyCaptures);
+            return StaticEvaluation.staticEval(BOARD_SIZE, currState, ourPiece, enemyPiece, ourCaptures, enemyCaptures);
         }
 
-        // Initialize ideal_score based on whether we're maximizing or minimizing
-        GameOuterClass.GameState moveTreeNode = moveTree.get(stateNodeIndex).get(0);
-        GameOuterClass.GameState moveTreeChildren = moveTree.get(stateNodeIndex).get(1);
+        // Initialize idealScore based on whether we're maximizing or minimizing
+        List<Object> moveTreeNode = moveTree.get(stateNodeIndex);
+        List<GameOuterClass.GameState> moveTreeChildren = (List<GameOuterClass.GameState>) moveTreeNode.get(1);
 
         int idealScore;
-        GameOuterClass.GameState selectedState = null;
+        GameOuterClass.GameState selectedState;
 
         if (isMax) {
             idealScore = Integer.MIN_VALUE;
             for (GameOuterClass.GameState childState : moveTreeChildren) {
-                int childScore = minimaxEval(moveTree, childState, boardSize, false, maxPiece, currDepth + 1, alpha, beta);
+                int childScore = minimaxEval(moveTree, childState, BOARD_SIZE, false, maxPiece, currDepth + 1, alpha, beta);
                 if (childScore > idealScore) {
                     selectedState = childState;
                 }
@@ -62,7 +63,7 @@ public class Minimax {
         } else {
             idealScore = Integer.MAX_VALUE;
             for (GameOuterClass.GameState childState : moveTreeChildren) {
-                int childScore = minimaxEval(moveTree, childState, boardSize, true, maxPiece, currDepth + 1, alpha, beta);
+                int childScore = minimaxEval(moveTree, childState, BOARD_SIZE, true, maxPiece, currDepth + 1, alpha, beta);
                 if (childScore < idealScore) {
                     selectedState = childState;
                 }
@@ -73,17 +74,17 @@ public class Minimax {
                 }
             }
         }
-
-        return idealScore;  // Return ideal score of the current state
+        return idealScore;
     }
 
     // Basic minimax function to select the best move from the current state
     public static GameOuterClass.GameState basicMinimax(GameOuterClass.GameState state, int boardSize, int currPiece, int maxPiece) {
         int depth = (state.getNumTurns() > 4) ? 3 : 2;
         // Generate move tree (you'll need a function for move generation in Java)
-        List<List<GameOuterClass.GameState>> moveTree = MoveGeneration.generateMoveTree(state, boardSize, currPiece, depth);
-        GameOuterClass.GameState rootNode = moveTree.get(0).get(0);
-        List<GameOuterClass.GameState> rootChildren = moveTree.get(0).get(1);
+        MoveGeneration moveGeneration = new MoveGeneration(boardSize);
+        List<List<Object>> moveTree = moveGeneration.generateMoveTree(state, boardSize, (byte) currPiece, depth);
+        GameOuterClass.GameState rootNode = (GameOuterClass.GameState) moveTree.get(0).get(0);
+        List<GameOuterClass.GameState> rootChildren = (List<GameOuterClass.GameState>) moveTree.get(0).get(1);
 
         int maxScore = Integer.MIN_VALUE;
         int maxScoreIdx = -1;

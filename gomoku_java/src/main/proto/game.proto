@@ -8,6 +8,8 @@
 
 syntax = "proto3";
 
+package game;
+
 service Game {
 	rpc GetGameMeta(Empty) returns (GameMeta) {}
 	rpc SetGameMeta(GameMeta) returns (Empty) {}

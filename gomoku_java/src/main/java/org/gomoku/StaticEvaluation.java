@@ -1,6 +1,8 @@
 package org.gomoku;
 
+import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
+import game.GameOuterClass;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -8,72 +10,6 @@ import java.util.List;
 import java.util.function.Function;
 
 public class StaticEvaluation {
-
-    private static int BOARD_SIZE = 11;
-
-    public static int getTopIdx(int idx) {
-        if (idx < BOARD_SIZE) {
-            return -1;
-        }
-        return idx - BOARD_SIZE;
-    }
-
-    // Get bottom index (downward move)
-    public static int getBtmIdx(int idx) {
-        int dim = BOARD_SIZE * BOARD_SIZE;
-        if (idx > (dim - BOARD_SIZE - 1)) {
-            return -1;
-        }
-        return idx + BOARD_SIZE;
-    }
-
-    // Get left index (leftward move)
-    public static int getLeftIdx(int idx) {
-        if (idx % BOARD_SIZE == 0) {
-            return -1;
-        }
-        return idx - 1;
-    }
-
-    // Get right index (rightward move)
-    public static int getRightIdx(int idx) {
-        if ((idx + 1) % BOARD_SIZE == 0) {
-            return -1;
-        }
-        return idx + 1;
-    }
-
-    public static int getTopLeftIdx(int idx) {
-        int top = getTopIdx(idx);
-        if (top == -1) {
-            return -1;
-        }
-        return getLeftIdx(top);
-    }
-
-    public static int getBtmLeftIdx(int idx) {
-        int btm = getBtmIdx(idx);
-        if (btm == -1) {
-            return -1;
-        }
-        return getLeftIdx(btm);
-    }
-
-    public static int getTopRightIdx(int idx) {
-        int top = getTopIdx(idx);
-        if (top == -1) {
-            return -1;
-        }
-        return getRightIdx(top);
-    }
-
-    public static int getBtmRightIdx(int idx) {
-        int btm = getBtmIdx(idx);
-        if (btm == -1) {
-            return -1;
-        }
-        return getRightIdx(btm);
-    }
     public static List<List<Byte>> extractDimensionalCells(byte[] board, List<List<Integer>> rowIndices) {
         List<List<Byte>> directionCells = new ArrayList<>();
         for (List<Integer> rowIndexSet : rowIndices) {
@@ -272,8 +208,8 @@ public class StaticEvaluation {
     public static int staticEvalDirectional(
             int boardSize,
             GameOuterClass.GameState gameState,
-            int ourPiece,
-            int enemyPiece,
+            byte ourPiece,
+            byte enemyPiece,
             int movesNext
     ) {
         int dimension = boardSize * boardSize;
@@ -318,12 +254,12 @@ public class StaticEvaluation {
                     extractionScore += numPiecesSection;
 
                     // Penalize big gaps in our combos (low sensitivity)
-                    extractionScore -= calculateGapPenalty(startIdx, endIdx, extraction, ourPiece);
+                    extractionScore -= calculateGapPenalty(startIdx, endIdx, Bytes.toArray(extraction), ourPiece);
 
                     // Move start index to the current end index
                     startIdx = endIdx;
                 }
-                extractionScore += calculateOpenBonus(extraction, ourPiece, movesNext);
+                extractionScore += calculateOpenBonus(Bytes.toArray(extraction), ourPiece, movesNext);
                 totalScore += extractionScore;
             }
 
@@ -407,10 +343,11 @@ public class StaticEvaluation {
     ) {
         int movesNext = (gameState.getNumTurns() % 2 == 0) ? 1 : 2;
 
-        int myScore = staticEvalDirectional(boardSize, gameState, ourPiece, enemyPiece, movesNext);
+
+        int myScore = staticEvalDirectional(boardSize, gameState, (byte)ourPiece, (byte)enemyPiece, movesNext);
         int finalScore = myScore + ourCaptures * 2;
 
-        int enemyScore = staticEvalDirectional(boardSize, gameState, enemyPiece, ourPiece, movesNext);
+        int enemyScore = staticEvalDirectional(boardSize, gameState, (byte)enemyPiece, (byte)ourPiece, movesNext);
         finalScore -= enemyScore;
         finalScore -= enemyCaptures * 2;
 

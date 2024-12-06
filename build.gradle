@@ -1,0 +1,23 @@
+plugins {
+	id("application")
+}
+
+
+dependencies {
+	implementation project(':gomoku_java')
+}
+
+allprojects {
+	repositories {
+		mavenCentral()
+	}
+	java {
+		toolchain {
+			languageVersion = JavaLanguageVersion.of(17)
+		}
+	}
+}
+
+application {
+	project(':gomoku_java')
+}

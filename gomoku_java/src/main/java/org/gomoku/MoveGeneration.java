@@ -2,22 +2,28 @@ package org.gomoku;
 
 
 import com.google.protobuf.ByteString;
+import game.GameOuterClass;
 
 import java.util.*;
 import java.util.function.Function;
 
 public class MoveGeneration {
 
-    public static List<List<Integer>> expandAllDirections(int idx, int depth) {
+    private final GomokuUtils gomokuUtils;
+
+    MoveGeneration(int boardSize) {
+        gomokuUtils = new GomokuUtils(boardSize);
+    }
+    public List<List<Integer>> expandAllDirections(int idx, int depth) {
         List<List<Integer>> res = new ArrayList<>();
-        List<Function<Integer, Integer>> dirFns = List.of(StaticEvaluation::getTopIdx,
-                StaticEvaluation::getBtmIdx,
-                StaticEvaluation::getLeftIdx,
-                StaticEvaluation::getRightIdx,
-                StaticEvaluation::getTopLeftIdx,
-                StaticEvaluation::getTopRightIdx,
-                StaticEvaluation::getBtmLeftIdx,
-                StaticEvaluation::getBtmRightIdx);
+        List<Function<Integer, Integer>> dirFns = List.of(gomokuUtils::getTopIdx,
+                gomokuUtils::getBtmIdx,
+                gomokuUtils::getLeftIdx,
+                gomokuUtils::getRightIdx,
+                gomokuUtils::getTopLeftIdx,
+                gomokuUtils::getTopRightIdx,
+                gomokuUtils::getBtmLeftIdx,
+                gomokuUtils::getBtmRightIdx);
 
         for (Function<Integer, Integer> dir : dirFns) {
             int lastDirRes = idx;
@@ -115,7 +121,7 @@ public class MoveGeneration {
     }
 
     // Detect double free threes when placing a piece
-    public static boolean detectDoubleFreeThrees(int inputIdx, int BOARD_SIZE, byte piece, byte[] board) {
+    public boolean detectDoubleFreeThrees(int inputIdx, int BOARD_SIZE, byte piece, byte[] board) {
         List<List<Integer>> localExpansions = expandAllDirections(inputIdx, BOARD_SIZE);
         List<List<Integer>> localExpansionGrouping = groupLocalExpansions(localExpansions);
 
@@ -160,7 +166,7 @@ public class MoveGeneration {
         return false;
     }
 
-    public static boolean hasThreat(int inputIdx, int BOARD_SIZE, byte piece, byte[] board) {
+    public boolean hasThreat(int inputIdx, int BOARD_SIZE, byte piece, byte[] board) {
         // Generate local expansions of current piece
         List<List<Integer>> localExpansions = expandAllDirections(inputIdx, BOARD_SIZE);
 
@@ -319,7 +325,7 @@ public class MoveGeneration {
         return true;
     }
 
-    public static GameOuterClass.GameState placePieceAttempt(int index, byte piece, GameOuterClass.GameState state, int BOARD_SIZE, boolean ignoreSelfCaptured) {
+    public GameOuterClass.GameState placePieceAttempt(int index, byte piece, GameOuterClass.GameState state, int BOARD_SIZE, boolean ignoreSelfCaptured) {
         byte[] board = state.getBoard().toByteArray();
 
         // Validate if the board index is empty
@@ -335,14 +341,14 @@ public class MoveGeneration {
         // Validate if placing such a piece will capture an opponent
         List<Boolean> capturedValidationRes = new ArrayList<>();
         List<Function<Integer,Integer>> fnMappings = List.of(
-                StaticEvaluation::getBtmIdx,
-                StaticEvaluation::getTopIdx,
-                StaticEvaluation::getLeftIdx,
-                StaticEvaluation::getRightIdx,
-                StaticEvaluation::getBtmLeftIdx,
-                StaticEvaluation::getTopRightIdx,
-                StaticEvaluation::getTopLeftIdx,
-                StaticEvaluation::getBtmRightIdx
+                gomokuUtils::getBtmIdx,
+                gomokuUtils::getTopIdx,
+                gomokuUtils::getLeftIdx,
+                gomokuUtils::getRightIdx,
+                gomokuUtils::getBtmLeftIdx,
+                gomokuUtils::getTopRightIdx,
+                gomokuUtils::getTopLeftIdx,
+                gomokuUtils::getBtmRightIdx
         );
 
         for (var fnMapping : fnMappings) {
@@ -400,14 +406,14 @@ public class MoveGeneration {
         // Validate if placing such a piece will get myself captured
         capturedValidationRes.clear();
         List<FunctionPair> newMappings = List.of(
-                new FunctionPair(StaticEvaluation::getBtmIdx, StaticEvaluation::getTopIdx),
-                new FunctionPair(StaticEvaluation::getTopIdx, StaticEvaluation::getBtmIdx),
-                new FunctionPair(StaticEvaluation::getLeftIdx, StaticEvaluation::getRightIdx),
-                new FunctionPair(StaticEvaluation::getRightIdx, StaticEvaluation::getLeftIdx),
-                new FunctionPair(StaticEvaluation::getBtmLeftIdx, StaticEvaluation::getTopRightIdx),
-                new FunctionPair(StaticEvaluation::getTopRightIdx, StaticEvaluation::getBtmLeftIdx),
-                new FunctionPair(StaticEvaluation::getTopLeftIdx, StaticEvaluation::getBtmRightIdx),
-                new FunctionPair(StaticEvaluation::getBtmRightIdx, StaticEvaluation::getTopLeftIdx)
+                new FunctionPair(gomokuUtils::getBtmIdx, gomokuUtils::getTopIdx),
+                new FunctionPair(gomokuUtils::getTopIdx, gomokuUtils::getBtmIdx),
+                new FunctionPair(gomokuUtils::getLeftIdx, gomokuUtils::getRightIdx),
+                new FunctionPair(gomokuUtils::getRightIdx, gomokuUtils::getLeftIdx),
+                new FunctionPair(gomokuUtils::getBtmLeftIdx, gomokuUtils::getTopRightIdx),
+                new FunctionPair(gomokuUtils::getTopRightIdx, gomokuUtils::getBtmLeftIdx),
+                new FunctionPair(gomokuUtils::getTopLeftIdx, gomokuUtils::getBtmRightIdx),
+                new FunctionPair(gomokuUtils::getBtmRightIdx, gomokuUtils::getTopLeftIdx)
         );
         for (FunctionPair functionPair : newMappings) {
             capturedValidationRes.add(StaticEvaluation.validateNoCapDirection(functionPair.fnc1, functionPair.fnc2, index, BOARD_SIZE, piece, board));
@@ -485,7 +491,7 @@ public class MoveGeneration {
         return newGameState;
     }
 
-    public static List<GameOuterClass.GameState> generatePossibleMoves(GameOuterClass.GameState state, int boardSize, byte piece, boolean filterEndMoves) {
+    public List<GameOuterClass.GameState> generatePossibleMoves(GameOuterClass.GameState state, int boardSize, byte piece, boolean filterEndMoves) {
         byte[] currBoard = state.getBoard().toByteArray(); // Assuming `getBoard()` returns a 1D array representation
         int dims = boardSize * boardSize;
         List<GameOuterClass.GameState> result = new ArrayList<>();
@@ -547,7 +553,7 @@ public class MoveGeneration {
         return result;
     }
 
-    public static List<List<Object>> generateMoveTree(GameOuterClass.GameState state, int boardSize,  byte piece, int depth) {
+    public List<List<Object>> generateMoveTree(GameOuterClass.GameState state, int boardSize, byte piece, int depth) {
         List<List<Object>> result = new ArrayList<>();
 
         for (int i = 0; i < depth; i++) {
