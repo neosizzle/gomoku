@@ -2,3 +2,4 @@ grpc/
 env/
 __pycache__
 venv/
+*/build/
