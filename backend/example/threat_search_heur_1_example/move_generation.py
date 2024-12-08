@@ -128,31 +128,62 @@ def has_free_three(buffer, piece, idx_to_place):
 		return False
 	
 	buffer_clone[idx_to_place] = piece
+
+	# iterate the cloned modified buffer to find the first piece
 	while begin < len(buffer_clone):
-		end = begin + 1
-		while end < len(buffer_clone):
-			# stop traversing end pointer if we get enemy
-			if buffer_clone[end] != piece and buffer_clone[end] != 0:
-				break
+		# If we found our piece, execute procedure
+		if buffer_clone[begin] == piece and begin != len(buffer) - 1:
+			# try to find end with 1 gap leniency
+			gap = 1
+			end = begin + 1
 
-			# stop traversing end pointer if we hit space
-			if buffer_clone[end] == 0:
-				break
+			while end < len(buffer_clone):
+				if buffer_clone[end] == 0:
+					if gap == 0:
+						break
+					gap -= 1
+					end += 1
+					continue
+				
+				# enemy encounter
+				if buffer_clone[end] != piece:
+					break
 
-			end += 1
+				end += 1
 
-		# end pointer finished traversing, ignore if begin is at the start or end
-		# is at length of buffer end
-		if begin == 0 or end == len(buffer_clone):
-			begin = end
-			continue
+			# move end back to piece
+			if end == len(buffer_clone):
+				end -= 1
+			while end > begin + 1 and  buffer_clone[end] != piece:
+				end -= 1
 
-		# ignore if range is not in index_to_place
-		if not (idx_to_place >= begin and idx_to_place <= end) :
-			begin = end
-			continue
+			# print(f"begin {begin} end {end}, {end - begin}, buffer {buffer_clone}")
+			# at this point, end should be valid
+			# make sure end element is 0 and begin element - 1 is 0
+			if begin == 0:
+				begin = end
+				continue
+			
+			if end < len(buffer) - 1 and buffer_clone[end + 1] != 0:
+				begin = end
+				continue
 
-		return (end - begin == 4) and buffer[begin] == 0 and buffer[end] == 0	
+			if buffer_clone[begin - 1] != 0:
+				begin = end
+				continue
+
+			# check if length of free pieces is 2 or 3
+			if end - begin < 2 or end - begin > 3:
+				begin = end
+				continue
+
+			# if end - begin == 2, make sure there are no gaps
+			if end - begin == 2 and buffer_clone[end - 1] == 0:
+				begin = end
+				continue
+
+			return True
+		begin += 1
 	return False
 
 # Detects double free threes when attempting to place a piece, will return true if a double free three
@@ -775,4 +806,4 @@ def main():
 	# 	pretty_print_board(state.board, BOARD_SIZE)
 		# print("")
 
-main()
+# main()

@@ -282,7 +282,7 @@ def check_win_condition(BOARD_SIZE, game_state, our_piece, our_captures):
 		# extract cells in  direction
 		direction_cells = extract_dimensional_cells(board, direction_indices)
 		
-		for extraction in direction_cells:
+		for extraction_idx, extraction in enumerate(direction_cells):
 			# count cumulative pieces
 			cum_count = 0
 			for cell in extraction:
@@ -292,11 +292,63 @@ def check_win_condition(BOARD_SIZE, game_state, our_piece, our_captures):
 					cum_count = 0
 				
 				if cum_count >= 5:
-					return True
-	
+					if check_win_comb_nocap(BOARD_SIZE, board, direction_indices[extraction_idx]):
+						return True
 	return False
 
-# checks if a win combination is valid - no captures in combination pieces
+# Takes directional functions and make sure that there wont be any potential captures by enemy in the next round
+# returns true if there isnt any potential captures
+def validate_potential_nocap_direction(direction_fn,anti_direction_fn, idx, board_size, curr_piece, board):
+	
+	check_cell_idx = direction_fn(idx, board_size)
+	check_cell = board[check_cell_idx]
+
+	# returns true (OK) if curr piece is not playable
+	if curr_piece != 1 and curr_piece != 2:
+		return True
+
+	# gets cell at direction_fn, if its curr_piece
+	if check_cell == curr_piece:
+		# get cell to the new pieces direction_fn. if its enemy, 
+		check_neigh_cell = board[direction_fn(check_cell_idx, board_size)]
+		if check_neigh_cell != curr_piece and check_neigh_cell != 0:
+			# get cell to the original cells anti_direction_fn
+			anti_direct_cell = board[anti_direction_fn(idx, board_size)]
+			if anti_direct_cell != curr_piece and anti_direct_cell == 0:
+				return False
+			
+	# if cell at diretion fn aint curr_piece and its not space or border and not curr piece,
+	# means this is enemy
+	if check_cell != 0 and check_cell != -1 and check_cell != curr_piece:
+		# get the neighbour at anti_dir in the original index
+		anti_dir_idx = anti_direction_fn(idx, board_size)
+		check_neigh_cell = board[anti_dir_idx]
+		
+		# if its curr_piece, check anti direction again
+		if check_neigh_cell == curr_piece:
+			check_neigh_cell = board[anti_direction_fn(anti_dir_idx, board_size)]
+
+			# if its blank, return false
+			if check_neigh_cell == 0:
+				return False
+	return True
+
+
+# function to check if a win combination is valid. Retuns true if valid
+def check_win_comb_nocap(BOARD_SIZE, board, indices_to_check):
+	endgame_cap_validation_res = []
+	for cum_index in indices_to_check:
+		endgame_cap_validation_res.append(validate_potential_nocap_direction(utils.get_btm_idx, utils.get_top_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+		endgame_cap_validation_res.append(validate_potential_nocap_direction(utils.get_top_idx, utils.get_btm_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+		endgame_cap_validation_res.append(validate_potential_nocap_direction(utils.get_left_idx, utils.get_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+		endgame_cap_validation_res.append(validate_potential_nocap_direction(utils.get_right_idx, utils.get_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+		endgame_cap_validation_res.append(validate_potential_nocap_direction(utils.get_btm_left_idx, utils.get_top_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+		endgame_cap_validation_res.append(validate_potential_nocap_direction(utils.get_top_right_idx, utils.get_btm_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+		endgame_cap_validation_res.append(validate_potential_nocap_direction(utils.get_top_left_idx, utils.get_btm_right_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+		endgame_cap_validation_res.append(validate_potential_nocap_direction(utils.get_btm_right_idx, utils.get_top_left_idx, cum_index, BOARD_SIZE, board[cum_index], board))
+	return endgame_cap_validation_res.count(False) == 0
+
+# checks if a win combination is valid - a series cant get captured by enemy piece
 def check_valid_win_combo(BOARD_SIZE, game_state):
 	board = game_state.board
 
@@ -365,57 +417,62 @@ def check_valid_win_combo(BOARD_SIZE, game_state):
 
 def static_eval(BOARD_SIZE, game_state, our_piece, enemy_piece, our_captures, enemy_captures):
 	moves_next = 1 if game_state.num_turns % 2 == 0 else 2 	# see who moves next, will have advantage. Assumes p1 always moves first
-	# print(f'moves next {moves_next}')
 
 	my_score = static_eval_directional(BOARD_SIZE, game_state, our_piece, enemy_piece, moves_next)
-	# my_score = -1
-	# print(f"my_score {my_score}")
 	final_score = my_score
 	final_score += our_captures * 2
 
 	enemy_score = static_eval_directional(BOARD_SIZE, game_state, enemy_piece, our_piece, moves_next)
-	# enemy_score = -1
-	# print(f"enemy_score {enemy_score}")
 	final_score -= enemy_score
 	final_score -= enemy_captures * 2
 
+	if check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures):
+		if our_piece == 1:
+			final_score += 6969
+		else:
+			final_score -= 6969
 
-	# utils.pretty_print_board(game_state.board, BOARD_SIZE)
-	# print("==========================")
+	if check_win_condition(BOARD_SIZE, game_state, 2, game_state.p2_captures):
+		if our_piece == 2:
+			final_score += 6969
+		else:
+			final_score -= 6969
+
 	return final_score
 
-# def main():
+def main():
 	
-# 	# some metadata here
-# 	BOARD_SIZE = 10
+	# some metadata here
+	BOARD_SIZE = 10
 
-# 	board = bytes([
-# 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-# 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-# 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-# 		0, 0, 2, 0, 0, 0, 0, 0, 0, 0,
-# 		0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
-# 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-# 		0, 0, 0, 0, 0, 2, 0, 0, 0, 0,
-# 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-# 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-# 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-# 	]
-# 	)
-# 	game_state = game_pb2.GameState(
-# 		board=board,
-# 		p1_captures=0,
-# 		p0_captures=0,
-# 		num_turns=0,
-# 		is_end=False,
-# 		time_to_think_ns=0
-# 	)
+	board = bytes([
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 2, 1, 1, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	]
+	)
+	game_state = game_pb2.GameState(
+		board=board,
+		p1_captures=0,
+		p2_captures=0,
+		num_turns=0,
+		is_end=False,
+		time_to_think_ns=0
+	)
 
-# 	# check_valid_win_combo(BOARD_SIZE, game_state)
-# 	# print(f"{calculate_open_bonus([0, 0, 0, 0, 0, 0, 0, 0, 1], 1, 2)}")
+	# check_valid_win_combo(BOARD_SIZE, game_state)
+	# print(f"{calculate_open_bonus([0, 0, 0, 0, 0, 0, 0, 0, 1], 1, 2)}")
 
-# 	score = static_eval(BOARD_SIZE, game_state, 2, 1, game_state.p1_captures, game_state.p0_captures)
+	# score = static_eval(BOARD_SIZE, game_state, 2, 1, game_state.p2_captures, game_state.p1_captures)
+	score = 123
 
-# 	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p0_captures)}")
+	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p2_captures)}")
 
 # main()

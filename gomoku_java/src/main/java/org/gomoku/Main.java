@@ -10,7 +10,7 @@ public class Main {
     public static void main(String[] args) throws InterruptedException, IOException {
         int port = 50053;
         Server server = ServerBuilder.forPort(port)
-                .addService(new GameService(11))
+                .addService(new GameService(9))
                 .build();
 
         server.start();

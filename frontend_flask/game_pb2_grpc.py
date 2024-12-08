@@ -35,27 +35,27 @@ class GameStub(object):
             channel: A grpc.Channel.
         """
         self.GetGameMeta = channel.unary_unary(
-                '/Game/GetGameMeta',
+                '/game.Game/GetGameMeta',
                 request_serializer=game__pb2.Empty.SerializeToString,
                 response_deserializer=game__pb2.GameMeta.FromString,
                 _registered_method=True)
         self.SetGameMeta = channel.unary_unary(
-                '/Game/SetGameMeta',
+                '/game.Game/SetGameMeta',
                 request_serializer=game__pb2.GameMeta.SerializeToString,
                 response_deserializer=game__pb2.Empty.FromString,
                 _registered_method=True)
         self.Reset = channel.unary_unary(
-                '/Game/Reset',
+                '/game.Game/Reset',
                 request_serializer=game__pb2.Empty.SerializeToString,
                 response_deserializer=game__pb2.Empty.FromString,
                 _registered_method=True)
         self.SuggestNextMove = channel.unary_unary(
-                '/Game/SuggestNextMove',
+                '/game.Game/SuggestNextMove',
                 request_serializer=game__pb2.GameState.SerializeToString,
                 response_deserializer=game__pb2.GameState.FromString,
                 _registered_method=True)
         self.GetLastGameState = channel.unary_unary(
-                '/Game/GetLastGameState',
+                '/game.Game/GetLastGameState',
                 request_serializer=game__pb2.Empty.SerializeToString,
                 response_deserializer=game__pb2.GameState.FromString,
                 _registered_method=True)
@@ -124,9 +124,9 @@ def add_GameServicer_to_server(servicer, server):
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'Game', rpc_method_handlers)
+            'game.Game', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('Game', rpc_method_handlers)
+    server.add_registered_method_handlers('game.Game', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -147,7 +147,7 @@ class Game(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/Game/GetGameMeta',
+            '/game.Game/GetGameMeta',
             game__pb2.Empty.SerializeToString,
             game__pb2.GameMeta.FromString,
             options,
@@ -174,7 +174,7 @@ class Game(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/Game/SetGameMeta',
+            '/game.Game/SetGameMeta',
             game__pb2.GameMeta.SerializeToString,
             game__pb2.Empty.FromString,
             options,
@@ -201,7 +201,7 @@ class Game(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/Game/Reset',
+            '/game.Game/Reset',
             game__pb2.Empty.SerializeToString,
             game__pb2.Empty.FromString,
             options,
@@ -228,7 +228,7 @@ class Game(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/Game/SuggestNextMove',
+            '/game.Game/SuggestNextMove',
             game__pb2.GameState.SerializeToString,
             game__pb2.GameState.FromString,
             options,
@@ -255,7 +255,7 @@ class Game(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/Game/GetLastGameState',
+            '/game.Game/GetLastGameState',
             game__pb2.Empty.SerializeToString,
             game__pb2.GameState.FromString,
             options,

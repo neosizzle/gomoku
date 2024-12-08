@@ -156,12 +156,6 @@
         // Table cell click
         document.querySelectorAll('td').forEach(cell => {
             cell.addEventListener('click', function() {
-                if (resolved_move == false) {
-                    console.log("resolve move lock")
-                    return
-                }
-                resolved_move = false
-
                 const x = this.getAttribute('data-x');
                 const y = this.getAttribute('data-y');
 
@@ -189,6 +183,12 @@
                 
                 if (mode == "pve") 
                 {
+                    if (resolved_move == false) {
+                        console.log("resolve move lock")
+                        return
+                    }
+                    resolved_move = false
+
                     fetch('/move', {
                     method: 'POST',
                     headers: {
@@ -217,15 +217,14 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.status) { 
-                            updateGameBoard();
-                            if (current_player_pvp == 1) { current_player_pvp = 2 }
-                            else { current_player_pvp = 1 }
-                            document.getElementById('turn-display-player').innerHTML= current_player_pvp
-                            resolved_move = true
-                        } else {
-                            console.log("Invalid move or game over.");
+                        if (data.status != 200) {
+                            alert(data.message)
+                            return
                         }
+                        updateGameBoard();
+                        if (current_player_pvp == 1) { current_player_pvp = 2 }
+                        else { current_player_pvp = 1 }
+                        document.getElementById('turn-display-player').innerHTML= current_player_pvp
                     })
                     .catch(error => console.error('Error:', error));    
                 }

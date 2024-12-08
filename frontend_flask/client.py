@@ -4,6 +4,7 @@ import game_pb2_grpc
 import game_pb2
 import utils
 import static_eval
+import move_generation
 
 class GomokuClient:
 	def __init__(self):
@@ -171,6 +172,10 @@ class GomokuClient:
 		else:
 			board_copy[index] = 1 # we are player 1, AI is 2
 			
+		# validate to deny double free three
+		if move_generation.detect_double_free_threes(index, self.board_size, 1, board_copy) :
+			return jsonify(status=400, message="Double free three")
+
 		# apply new changes to board and increment turn count
 		self.game_state.board = bytes(board_copy)
 		self.game_state.num_turns += 1
@@ -182,7 +187,6 @@ class GomokuClient:
 			self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
 			return jsonify(status=200)
 
-	
 		print("suggesting next move for")
 		utils.pretty_print_board(board_copy, self.board_size)
 
@@ -303,6 +307,10 @@ class GomokuClient:
 		else:
 			board_copy[index] = our_piece
 			
+		# validate to deny double free three
+		if move_generation.detect_double_free_threes(index, self.board_size, our_piece, board_copy) :
+			return jsonify(status=400, message="Double free three")
+		
 		# apply new changes to board and increment turn count
 		self.game_state.board = bytes(board_copy)
 		self.game_state.num_turns += 1
