@@ -278,13 +278,14 @@ public class StaticEvaluation {
             byte[] board
     ) {
         int checkCellIdx = directionFn.apply(idx);
-        int checkCell = board[checkCellIdx];
+        int checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
 
         // Check if the cell in the given direction is the current piece
-        if (checkCell == currPiece) {
-            int checkNeighCell = board[(directionFn.apply(checkCellIdx))];
+        if (checkCell == currPiece && checkCell >= 0) {
+            int checkNeighCell = board[directionFn.apply(checkCellIdx)];
             if (checkNeighCell != currPiece && checkNeighCell != 0) {
-                int antiDirectCell = board[(antiDirectionFn.apply(idx))];
+
+                int antiDirectCell = antiDirectionFn.apply(idx) > 0 ? board[(antiDirectionFn.apply(idx))] : -1;
                 return antiDirectCell == currPiece || antiDirectCell == 0;
             }
         }

@@ -99,7 +99,11 @@ public class Minimax {
             }
         }
 
-        return rootChildren.get(maxScoreIdx);  // Return the best move (child state)
+        if (maxScoreIdx >= 0 && maxScoreIdx < rootChildren.size()) {
+            return rootChildren.get(maxScoreIdx);
+        } else {
+            return state;
+        } // Return the best move (child state)
     }
 
     // You can use this as a helper to time your minimax method

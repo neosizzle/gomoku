@@ -42,15 +42,15 @@ public class MoveGeneration {
     // Checks if a capture is made by placing curr_piece at idx
     public static boolean checkCaptureMadeDir(Function<Integer, Integer> directionFn, int idx, int boardSize, int currPiece, byte[] board) {
         int checkCellIdx = directionFn.apply(idx);
-        int checkCell = board[checkCellIdx];
+        int checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
 
         if (checkCell > 0 && checkCell != currPiece) {
             checkCellIdx = directionFn.apply(checkCellIdx);
-            checkCell = board[checkCellIdx];
+            checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
 
             if (checkCell > 0 && checkCell != currPiece) {
                 checkCellIdx = directionFn.apply(checkCellIdx);
-                checkCell = board[checkCellIdx];
+                checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
 
                 return checkCell == currPiece;
             }
@@ -265,14 +265,19 @@ public class MoveGeneration {
 
         // Calculate potential threat size
         if (!startClosed) {
-            while (startIdx >= 0 && buffer.get(startIdx) == 0) {
-                if (buffer.get(startIdx - 1) == 0 && buffer.get(startIdx - 2) == piece && !gap) {
-                    gap = true;
-                    startIdx--;
+            // this assumption should be true if startClosed is false, gap sensitive
+            while (startIdx >= 0 && buffer.get(startIdx) == (byte)0) {
+                // early gap detection
+                if (startIdx > 1) {
+                    if (buffer.get(startIdx - 1) == (byte)0 && buffer.get(startIdx -2) == (byte)piece && !gap) {
+                        gap = true;
+                        startIdx--;
+                    }
                 }
                 startIdx--;
             }
         }
+
 
         if (!endClosed) {
             while (endIdx < buffer.size() && buffer.get(endIdx) == 0) {
@@ -422,12 +427,6 @@ public class MoveGeneration {
         try {
             int weGotCapturedIdx = capturedValidationRes.indexOf(false);
 
-            // If we want to ignore self capture, return null
-            if (ignoreSelfCaptured) {
-                return null;
-            }
-
-            // Determine the direction of capture
             var mapFunc = newMappings.get(weGotCapturedIdx);
 
             // Turn the neighbour cell into blank and increase capture
