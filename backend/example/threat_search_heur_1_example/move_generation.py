@@ -514,66 +514,7 @@ def place_piece_attempt(index, piece, state, BOARD_SIZE, ignore_self_captured=Fa
 
 		return game_state
 
-	# validate if placing such a piece will get myself captured
-	captured_validation_res = []
-	fn_mappings = [
-		(0, get_btm_idx, get_top_idx),
-		(1, get_top_idx, get_btm_idx),
-		(2, get_left_idx, get_right_idx),
-		(3, get_right_idx, get_left_idx),
-		(4, get_btm_left_idx, get_top_right_idx),
-		(5, get_top_right_idx, get_btm_left_idx),
-		(6, get_top_left_idx, get_btm_right_idx),
-		(7, get_btm_right_idx, get_top_left_idx)
-	]
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[0][1], fn_mappings[0][2], index, BOARD_SIZE, piece, board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[1][1], fn_mappings[1][2], index, BOARD_SIZE, piece, board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[2][1], fn_mappings[2][2], index, BOARD_SIZE, piece, board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[3][1], fn_mappings[3][2], index, BOARD_SIZE, piece, board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[4][1], fn_mappings[4][2], index, BOARD_SIZE, piece, board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[5][1], fn_mappings[5][2], index, BOARD_SIZE, piece, board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[6][1], fn_mappings[6][2], index, BOARD_SIZE, piece, board))
-	captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[7][1], fn_mappings[7][2], index, BOARD_SIZE, piece, board))
-	try:
-		we_got_captured_idx = captured_validation_res.index(False)
-		
-		# if we want to ignore self captured, return none
-		if ignore_self_captured:
-			return None
-		
-		# determine the direction of capture
-		fn_mapping = fn_mappings[we_got_captured_idx]
 
-		# turn neighbour cell into blank and increase capture 
-		new_board = bytearray(board[:])
-		new_board[fn_mapping[1](index, BOARD_SIZE)] = 0
-		new_board = bytes(new_board)
-
-		new_p1_captures = state.p1_captures if piece == 1 else state.p1_captures + 1
-		new_p2_captures = state.p2_captures if piece == 2 else state.p2_captures + 1
-
-		game_state = game_pb2.GameState(
-			board=new_board,
-			p1_captures=new_p1_captures,
-			p2_captures=new_p2_captures,
-			num_turns=state.num_turns + 1,
-			is_end=0,
-			time_to_think_ns=0
-		)
-
-		# check for win condition
-		is_end = 0
-		if piece == 1:
-			if static_eval.check_win_condition(BOARD_SIZE, game_state, 2, new_p2_captures) : is_end = 2
-		if piece == 2:
-			if static_eval.check_win_condition(BOARD_SIZE, game_state, 1, new_p1_captures) : is_end = 1
-
-		game_state.is_end = is_end
-
-		return game_state
-	except:
-		pass
-	
 	new_board = bytearray(board[:])
 	# place piece in empty space, TODO check for heuristics
 	# TODO make a check threat function here, see if placing this piece here will defend / create

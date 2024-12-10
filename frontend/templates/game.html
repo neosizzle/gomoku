@@ -298,6 +298,12 @@
 
         // Suggest move from AI
         function suggest_move() {
+            if (resolved_move == false) {
+                console.log("resolve move lock")
+                return
+            }
+            resolved_move = false
+
             fetch('/suggest_move', {
                 method: 'POST',
             })
@@ -307,7 +313,7 @@
                 const suggested_y = Math.floor(data.index / parseInt("{{board_size}}"))
                 const suggested_x = data.index % parseInt("{{board_size}}")
 
-                alert(`suggested y ${suggested_y} suggested x ${suggested_x}`)
+                // alert(`suggested y ${suggested_y} suggested x ${suggested_x}`)
                 
                 // update UI here
                 table_rows = document.getElementById("board").children[0].children
@@ -323,7 +329,8 @@
                         }
                     }
                 }
-                
+                resolved_move = true
+
             })
             .catch(error => console.error('Error:', error));    
         }

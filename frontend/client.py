@@ -8,7 +8,7 @@ import move_generation
 
 class GomokuClient:
 	def __init__(self):
-		self.app = Flask('game_app', template_folder='./frontend_flask/templates')
+		self.app = Flask('game_app', template_folder='./frontend/templates')
 		self.channel = grpc.insecure_channel('localhost:50051')
 		self.stub = game_pb2_grpc.GameStub(self.channel)
 		self.board_size = 9
@@ -136,41 +136,7 @@ class GomokuClient:
 				board_copy[idx2] = 0
 				self.game_state.p1_captures += 1
 
-  		# validate if placing such a piece will get us captured 
-		captured_validation_res = []
-		fn_mappings = [
-			(0, utils.get_btm_idx, utils.get_top_idx),
-			(1, utils.get_top_idx, utils.get_btm_idx),
-			(2, utils.get_left_idx, utils.get_right_idx),
-			(3, utils.get_right_idx, utils.get_left_idx),
-			(4, utils.get_btm_left_idx, utils.get_top_right_idx),
-			(5, utils.get_top_right_idx, utils.get_btm_left_idx),
-			(6, utils.get_top_left_idx, utils.get_btm_right_idx),
-			(7, utils.get_btm_right_idx, utils.get_top_left_idx)
-		]
-
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[0][1], fn_mappings[0][2], index, self.board_size, 1, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[1][1], fn_mappings[1][2], index, self.board_size, 1, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[2][1], fn_mappings[2][2], index, self.board_size, 1, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[3][1], fn_mappings[3][2], index, self.board_size, 1, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[4][1], fn_mappings[4][2], index, self.board_size, 1, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[5][1], fn_mappings[5][2], index, self.board_size, 1, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[6][1], fn_mappings[6][2], index, self.board_size, 1, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[7][1], fn_mappings[7][2], index, self.board_size, 1, board_copy))
-
-		we_got_captured = False in captured_validation_res
-		if we_got_captured:
-			we_got_captured_idx = captured_validation_res.index(False)
-			
-			# determine the direction of capture
-			fn_mapping = fn_mappings[we_got_captured_idx]
-
-			new_board = bytearray(board_copy[:])
-			new_board[fn_mapping[1](index, self.board_size)] = 0
-			board_copy = bytes(new_board)
-			self.game_state.p2_captures += 1
-		else:
-			board_copy[index] = 1 # we are player 1, AI is 2
+		board_copy[index] = 1 # we are player 1, AI is 2
 			
 		# validate to deny double free three
 		if move_generation.detect_double_free_threes(index, self.board_size, 1, board_copy) :
@@ -226,9 +192,6 @@ class GomokuClient:
 		x = int(request.form['x'])
 		y = int(request.form['y'])
 		our_piece = int(request.form['piece'])
-		enemy_piece = 2
-		if our_piece == 2:
-			enemy_piece = 1
 		index = y * self.board_size + x  # Convert to 1D index
 
 		# capture checking here
@@ -269,43 +232,12 @@ class GomokuClient:
 				idx2 = fn_mapping[1](idx1, self.board_size)
 				board_copy[idx1] = 0
 				board_copy[idx2] = 0
-				self.game_state.p1_captures += 1
+				if our_piece == 1:
+					self.game_state.p1_captures += 1
+				else:
+					self.game_state.p2_captures += 1
 		
-		# validate if placing such a piece will get us captured 
-		captured_validation_res = []
-		fn_mappings = [
-			(0, utils.get_btm_idx, utils.get_top_idx),
-			(1, utils.get_top_idx, utils.get_btm_idx),
-			(2, utils.get_left_idx, utils.get_right_idx),
-			(3, utils.get_right_idx, utils.get_left_idx),
-			(4, utils.get_btm_left_idx, utils.get_top_right_idx),
-			(5, utils.get_top_right_idx, utils.get_btm_left_idx),
-			(6, utils.get_top_left_idx, utils.get_btm_right_idx),
-			(7, utils.get_btm_right_idx, utils.get_top_left_idx)
-		]
-
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[0][1], fn_mappings[0][2], index, self.board_size, our_piece, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[1][1], fn_mappings[1][2], index, self.board_size, our_piece, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[2][1], fn_mappings[2][2], index, self.board_size, our_piece, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[3][1], fn_mappings[3][2], index, self.board_size, our_piece, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[4][1], fn_mappings[4][2], index, self.board_size, our_piece, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[5][1], fn_mappings[5][2], index, self.board_size, our_piece, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[6][1], fn_mappings[6][2], index, self.board_size, our_piece, board_copy))
-		captured_validation_res.append(static_eval.validate_nocap_direction(fn_mappings[7][1], fn_mappings[7][2], index, self.board_size, our_piece, board_copy))
-
-		we_got_captured = False in captured_validation_res
-		if we_got_captured:
-			we_got_captured_idx = captured_validation_res.index(False)
-			
-			# determine the direction of capture
-			fn_mapping = fn_mappings[we_got_captured_idx]
-
-			new_board = bytearray(board_copy[:])
-			new_board[fn_mapping[1](index, self.board_size)] = 0
-			board_copy = bytes(new_board)
-			self.game_state.p2_captures += 1
-		else:
-			board_copy[index] = our_piece
+		board_copy[index] = our_piece
 			
 		# validate to deny double free three
 		if move_generation.detect_double_free_threes(index, self.board_size, our_piece, board_copy) :
