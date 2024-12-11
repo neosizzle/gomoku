@@ -565,6 +565,7 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 		# get all indices from all directions within a 2 depth range
 		directional_indices = sum(expand_all_directions(i, 2, BOARD_SIZE), []) # combine list results
 		for val in directional_indices:
+			# print(f"checking {val}")
 			# ignore cells which are occupied
 			if curr_board[val] != 0:
 				continue
@@ -584,7 +585,6 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 
 	# iterate through all cells in dimensions
 	for i in indices_to_check:
-
 		# attempt to place piece in empty space. If such a piece is not valid
 		# do not add the move into the result array
 		game_state = place_piece_attempt(i, piece, state, BOARD_SIZE, ignore_self_captured=True)
@@ -621,13 +621,14 @@ def generate_move_tree(state: game_pb2.GameState, BOARD_SIZE: int, piece: int, d
 			# iterate the adjacency list to find leaves
 			for j in range(len(res)):
 				if res[j][1] == None:
+					# print(f"gen moves {res[j][0]}")
 					# generate children of leaf
 					leaf_children = generate_possible_moves(res[j][0], BOARD_SIZE, curr_piece, filter_endmoves=True)
 					res[j][1] = leaf_children
 					new_leaves.append(leaf_children)
-
 			# update adjacency list to include all new leaves
 			for leaf in new_leaves:
+				# print(f"root children {len(leaf)}")
 				for state in leaf:
 					res.append([state, None])
 	return res
@@ -664,23 +665,23 @@ def main():
 
 	board = bytes([
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 1, 0, 0, 0, 0, 0,
-		0, 0, 1, 1, 1, 1, 0, 0, 0,
-		0, 0, 0, 2, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 2, 0, 0, 0, 0,
-		0, 0, 0, 2, 0, 2, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0
+    	0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 0, 0, 1, 0, 0, 1, 0, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 0, 0, 0, 2, 0, 0, 0, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0
 	])
 
 	# p1 is 1, p2 is 2
 	game_state = game_pb2.GameState(
 		board=board,
-		p1_captures=4,
-		p2_captures=4,
-		num_turns=0,
-		is_end=0,
+		p1_captures=0,
+		p2_captures=1,
+		num_turns=7,
+		is_end=False,
 		time_to_think_ns=0
 	)
 
@@ -727,7 +728,7 @@ def main():
 	# 	if board[i] == 0:
 	# 		print(f"{has_threat(i, BOARD_SIZE, 1, board)} at {i}")
 
-	# print(has_free_three([0, 0, 0, 0, 0, 2, 2, 0, 0], 2, 7))
+	# print(has_free_three([0, 0, 0, 1, 0, 0, 2, 0, 0], 2, 5))
 	# new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
 	# if new_state is None:
 	# 	print("new state is none")
@@ -735,17 +736,17 @@ def main():
 	# 	pretty_print_board(new_state.board, BOARD_SIZE)
 	# 	print(f"{new_state}")
 
-	# move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 3)
-	# print(f"{len(move_tree)}")
+	move_tree = generate_move_tree(game_state, BOARD_SIZE, 2, 3)
+	print(f"{len(move_tree)}")
 	
 	# for node in move_tree:
 	# 	pretty_print_board(node[0].board, BOARD_SIZE)
 	# 	print("")
 
-	possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 1, filter_endmoves=True)
-	print(f"{len(possible_moves)}")
+	# possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 2, filter_endmoves=True)
+	# print(f"{len(possible_moves)}")
 	# for state in possible_moves:
 	# 	pretty_print_board(state.board, BOARD_SIZE)
-		# print("")
+	# 	print("")
 
 main()

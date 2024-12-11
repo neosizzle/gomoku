@@ -97,7 +97,7 @@ public class MoveGeneration {
         while (begin < bufferClone.size()) {
             if (bufferClone.get(begin) == piece && begin != bufferClone.size() - 1) {
                 int end = getEnd(piece, begin, bufferClone);
-                //print(f"begin {begin} end {end}, {end - begin}, buffer {buffer_clone}")
+                // System.out.println("begin " + begin + " end " + end + ", " + (end - begin) + ", buffer " + bufferClone);
                 //at this point, end should be valid
                 //make sure end element is 0 and begin element - 1 is 0
 
@@ -149,7 +149,7 @@ public class MoveGeneration {
             end--;
         }
 
-        while (end < begin + 1 && bufferClone.get(end) != piece) {
+        while (end > begin + 1 && bufferClone.get(end) != piece) {
             end--;
         }
         return end;
@@ -186,11 +186,13 @@ public class MoveGeneration {
             cellValueBuffers.add(cellValues);
             groupIndices.add(groupIdx);
         }
+        // System.out.println("hmm " + cellValueBuffers);
 
         int freeThreeIdx = -1;
         for (int i = 0; i < cellValueBuffers.size(); i++) {
             List<Byte> buffer = cellValueBuffers.get(i);
             if (hasFreeThree(buffer, piece, groupIndices.get(i))) {
+                // System.out.println("Has free three " + buffer + " " + piece + " " + groupIndices.get(i));
                 if (freeThreeIdx != -1) {
                     return true;
                 }
@@ -495,6 +497,8 @@ public class MoveGeneration {
             List<Integer> directionalIndices = expandAllDirections(i, 2).stream().flatMap(List::stream)
             .collect(Collectors.toList());
             for (Integer val : directionalIndices) {
+                // System.out.println("checking " + val);
+
                 if (currBoard[val] != 0) {
                     continue;
                 }
@@ -530,7 +534,7 @@ public class MoveGeneration {
                 return winningMoves;
             }
         }
-
+        
         return result;
     }
 
@@ -546,22 +550,40 @@ public class MoveGeneration {
                 result.add(new GomokuUtils.GameStateNode(state, rootChildren));
 
                 for (GameOuterClass.GameState child : rootChildren) {
-                    result.add(new GomokuUtils.GameStateNode(state, null));
+                    result.add(new GomokuUtils.GameStateNode(child, null));
                 }
             } else {
                 List<List<GameOuterClass.GameState>> newLeaves = new ArrayList<>();
-
+                
                 // Find leaves and generate their children
+
                 for (GomokuUtils.GameStateNode node : result) {
                     if (node.children() == null) {
+                        // System.out.print("gen moves " + node.state());
                         List<GameOuterClass.GameState> leafChildren = generatePossibleMoves(node.state(), boardSize, currPiece, true);
                         result.set(result.indexOf(node), new GomokuUtils.GameStateNode(node.state(), leafChildren));
                         newLeaves.add(leafChildren);
                     }
                 }
-
+                
+                // int curr_result_len = result.size();
+                // for (int j = 0 ; j < curr_result_len; ++j)
+                // {
+                //     GomokuUtils.GameStateNode node = result.get(j);
+                //     if (result.get(j) == null)
+                //     {
+                //         List<GameOuterClass.GameState> leafChildren = generatePossibleMoves(node.state(), boardSize, currPiece, true);
+                //         result.set(j, new GomokuUtils.GameStateNode(node.state(), leafChildren));
+                //         newLeaves.add(leafChildren);
+                //     }
+                // }
+                
                 // Add new leaves to the result
                 for (List<GameOuterClass.GameState> leafList : newLeaves) {
+                    // System.out.println("root children " + leafList.size());
+                    // if (leafList.size() > 1) {
+                    //     return result;
+                    // }
                     for (GameOuterClass.GameState leaf : leafList) {
                         result.add(new GomokuUtils.GameStateNode(leaf, null));
                     }
