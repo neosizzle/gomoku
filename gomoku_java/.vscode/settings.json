@@ -1,8 +1,0 @@
-{
-	"java.project.sourcePaths": [
-		"build/generated/source/proto/main",
-		"build/generated/source/proto/test/grpc",
-		"build/generated/source/proto/test/java",
-		"build/generated/sources/annotationProcessor/java/main"
-	]
-}
