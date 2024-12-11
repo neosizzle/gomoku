@@ -278,19 +278,34 @@ public class StaticEvaluation {
             byte[] board
     ) {
         int checkCellIdx = directionFn.apply(idx);
-        int checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
+        if (checkCellIdx < 0 || checkCellIdx >= board.length) {
+            return false; // Index is out of bounds
+        }
+        int checkCell = board[checkCellIdx];
 
         // Check if the cell in the given direction is the current piece
-        if (checkCell == currPiece && checkCell >= 0) {
-            int checkNeighCell = board[directionFn.apply(checkCellIdx)];
-            if (checkNeighCell != currPiece && checkNeighCell != 0) {
+        if (checkCell == currPiece) {
+            // Get the next cell in the same direction
+            int nextCellIdx = directionFn.apply(checkCellIdx);
+            if (nextCellIdx < 0 || nextCellIdx >= board.length) {
+                return false; // Index is out of bounds
+            }
+            int checkNeighCell = board[nextCellIdx];
 
-                int antiDirectCell = antiDirectionFn.apply(idx) > 0 ? board[(antiDirectionFn.apply(idx))] : -1;
-                return antiDirectCell == currPiece || antiDirectCell == 0;
+            if (checkNeighCell != currPiece && checkNeighCell != 0) {
+                // Check the anti-direction
+                int antiDirectCell = antiDirectionFn.apply(idx);
+                if (antiDirectCell < 0 || antiDirectCell >= board.length) {
+                    return false; // Index is out of bounds
+                }
+                int antiCell = board[antiDirectCell];
+                return (antiCell == currPiece || antiCell == 0);
             }
         }
+
         return true;
     }
+
 
     public static boolean checkWinCondition(
             int boardSize,

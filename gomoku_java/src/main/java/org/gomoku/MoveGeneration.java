@@ -41,18 +41,19 @@ public class MoveGeneration {
 
     // Checks if a capture is made by placing curr_piece at idx
     public static boolean checkCaptureMadeDir(Function<Integer, Integer> directionFn, int idx, int boardSize, int currPiece, byte[] board) {
+        byte piece = (byte) currPiece;
         int checkCellIdx = directionFn.apply(idx);
-        int checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
+        byte checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
 
-        if (checkCell > 0 && checkCell != currPiece) {
+        if (checkCell > 0 && checkCell != piece) {
             checkCellIdx = directionFn.apply(checkCellIdx);
             checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
 
-            if (checkCell > 0 && checkCell != currPiece) {
+            if (checkCell > 0 && checkCell != piece) {
                 checkCellIdx = directionFn.apply(checkCellIdx);
                 checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
 
-                return checkCell == currPiece;
+                return checkCell == piece;
             }
         }
         return false;
@@ -213,7 +214,7 @@ public class MoveGeneration {
     }
 
     // Detects threat formation when attempting to place a piece
-    public static boolean detectThreatFormation(List<Byte> buffer, int piece, int idxToPlace) {
+    public static boolean detectThreatFormation(List<Byte> buffer, byte piece, int idxToPlace) {
         int startIdx = idxToPlace - 1;
         int endIdx = idxToPlace + 1;
         boolean gap = false;
@@ -307,7 +308,7 @@ public class MoveGeneration {
 
     // Detects threat when attempting to place a piece, returns true if an enemy threat is blocked
     public static boolean detectThreatBlock(List<Byte> buffer, int piece, int idxToPlace) {
-        int enemyPiece = (piece == 1) ? 2 : 1;
+        byte enemyPiece = (piece == 1) ? (byte) 2 : (byte) 1;
         boolean validThreat = detectThreatFormation(buffer, enemyPiece, idxToPlace);
         if (!validThreat) {
             return false;
@@ -345,7 +346,7 @@ public class MoveGeneration {
 
         // Validate if placing such a piece will capture an opponent
         List<Boolean> capturedValidationRes = new ArrayList<>();
-        List<Function<Integer,Integer>> fnMappings = List.of(
+        List<Function<Integer, Integer>> fnMappings = List.of(
                 gomokuUtils::getBtmIdx,
                 gomokuUtils::getTopIdx,
                 gomokuUtils::getLeftIdx,
@@ -356,7 +357,8 @@ public class MoveGeneration {
                 gomokuUtils::getBtmRightIdx
         );
 
-        for (var fnMapping : fnMappings) {
+        // Check for captures in all 8 directions
+        for (Function<Integer, Integer> fnMapping : fnMappings) {
             capturedValidationRes.add(checkCaptureMadeDir(fnMapping, index, BOARD_SIZE, piece, board));
         }
 
@@ -367,28 +369,34 @@ public class MoveGeneration {
             }
         }
 
+        // If we captured opponent pieces
         if (!weCapturedIndices.isEmpty()) {
             byte[] newBoard = board.clone();
-            newBoard[index] = (byte) piece;
+            newBoard[index] = piece; // Place the piece
+
             int newP1Captures = (int) state.getP1Captures();
             int newP2Captures = (int) state.getP2Captures();
 
+            // Process each captured piece
             for (int weCapturedIdx : weCapturedIndices) {
-
                 // Determine the direction of capture
-                int idx1 = fnMappings.get(weCapturedIdx).apply(index);
-                int idx2 = fnMappings.get(weCapturedIdx).apply(idx1);
+                Function<Integer, Integer> fnMapping = fnMappings.get(weCapturedIdx);
+                int idx1 = fnMapping.apply(index);
+                int idx2 = fnMapping.apply(idx1);
 
-                newBoard[idx1] = 0;
+                newBoard[idx1] = 0; // Remove captured piece
                 newBoard[idx2] = 0;
-                if (piece == 1) {
+
+                if (piece == (byte) 1) {
                     newP1Captures++;
                 } else {
                     newP2Captures++;
                 }
             }
 
-            GameOuterClass.GameState gameState = GameOuterClass.GameState.newBuilder().setBoard(ByteString.copyFrom(newBoard))
+            // Create the new game state
+            GameOuterClass.GameState gameState = GameOuterClass.GameState.newBuilder()
+                    .setBoard(ByteString.copyFrom(newBoard))
                     .setP1Captures(newP1Captures)
                     .setP2Captures(newP2Captures)
                     .setNumTurns(state.getNumTurns() + 1)
@@ -404,74 +412,15 @@ public class MoveGeneration {
             }
 
             gameState = gameState.toBuilder().setIsEnd(isEnd).build();
-
             return gameState;
         }
 
-        // Validate if placing such a piece will get myself captured
-        capturedValidationRes.clear();
-        List<FunctionPair> newMappings = List.of(
-                new FunctionPair(gomokuUtils::getBtmIdx, gomokuUtils::getTopIdx),
-                new FunctionPair(gomokuUtils::getTopIdx, gomokuUtils::getBtmIdx),
-                new FunctionPair(gomokuUtils::getLeftIdx, gomokuUtils::getRightIdx),
-                new FunctionPair(gomokuUtils::getRightIdx, gomokuUtils::getLeftIdx),
-                new FunctionPair(gomokuUtils::getBtmLeftIdx, gomokuUtils::getTopRightIdx),
-                new FunctionPair(gomokuUtils::getTopRightIdx, gomokuUtils::getBtmLeftIdx),
-                new FunctionPair(gomokuUtils::getTopLeftIdx, gomokuUtils::getBtmRightIdx),
-                new FunctionPair(gomokuUtils::getBtmRightIdx, gomokuUtils::getTopLeftIdx)
-        );
-        for (FunctionPair functionPair : newMappings) {
-            capturedValidationRes.add(StaticEvaluation.validateNoCapDirection(functionPair.fnc1, functionPair.fnc2, index, BOARD_SIZE, piece, board));
-        }
-
-        try {
-            int weGotCapturedIdx = capturedValidationRes.indexOf(false);
-
-            var mapFunc = newMappings.get(weGotCapturedIdx);
-
-            // Turn the neighbour cell into blank and increase capture
-            byte[] newBoard = board.clone();
-            newBoard[mapFunc.fnc1.apply(index)] = 0;
-            newBoard = newBoard.clone();
-
-            int newP1Captures = (int) state.getP1Captures();
-            int newP2Captures = (int) state.getP2Captures();
-
-            if (piece == 1) {
-                newP1Captures++;
-            } else {
-                newP2Captures++;
-            }
-
-            GameOuterClass.GameState gameState = GameOuterClass.GameState.newBuilder().setBoard(ByteString.copyFrom(newBoard))
-                    .setP1Captures(newP1Captures)
-                    .setP2Captures(newP2Captures)
-                    .setNumTurns(state.getNumTurns() + 1)
-                    .build();
-
-            // Check for win condition
-            int isEnd = 0;
-            if (piece == 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 1, newP1Captures)) {
-                isEnd = 1;
-            }
-            if (piece == 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 2, newP2Captures)) {
-                isEnd = 2;
-            }
-
-            gameState = gameState.toBuilder().setIsEnd(isEnd).build();
-
-            return gameState;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Place piece in empty space, TODO: check for heuristics
+        // If no captures were made, place the piece in the empty space
         byte[] newBoard = board.clone();
-        newBoard[index] = (byte) piece;
-        newBoard = newBoard.clone();
+        newBoard[index] = piece;
 
-
-        GameOuterClass.GameState newGameState = GameOuterClass.GameState.newBuilder().setBoard(ByteString.copyFrom(newBoard))
+        GameOuterClass.GameState newGameState = GameOuterClass.GameState.newBuilder()
+                .setBoard(ByteString.copyFrom(newBoard))
                 .setP1Captures(state.getP1Captures())
                 .setP2Captures(state.getP2Captures())
                 .setNumTurns(state.getNumTurns() + 1)
@@ -556,7 +505,7 @@ public class MoveGeneration {
         List<List<Object>> result = new ArrayList<>();
 
         for (int i = 0; i < depth; i++) {
-            byte currPiece = (i % 0x02 == 0) ? piece : (byte) (piece == 0x01 ? 0x02 : 0x01);
+            byte currPiece = (i % 2 == 0) ? piece : (byte) (piece ==  (byte) 1 ? (byte) 2 : (byte) 1);
 
             // Generate first depth
             if (result.isEmpty()) {
@@ -590,9 +539,5 @@ public class MoveGeneration {
         }
 
         return result;
-    }
-
-    private record FunctionPair(Function<Integer, Integer> fnc1, Function<Integer, Integer> fnc2) {
-
     }
 }
