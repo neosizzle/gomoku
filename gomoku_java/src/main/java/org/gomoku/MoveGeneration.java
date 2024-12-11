@@ -95,34 +95,64 @@ public class MoveGeneration {
         int begin = 0;
 
         while (begin < bufferClone.size()) {
-            int end = begin + 1;
-            while (end < bufferClone.size()) {
-                if (bufferClone.get(end) != piece && bufferClone.get(end) != 0) {
-                    break;
+            if (bufferClone.get(begin) == piece && begin != bufferClone.size() - 1) {
+                int end = getEnd(piece, begin, bufferClone);
+                //print(f"begin {begin} end {end}, {end - begin}, buffer {buffer_clone}")
+                //at this point, end should be valid
+                //make sure end element is 0 and begin element - 1 is 0
+
+                if (begin == 0) {
+                    begin = end;
+                    continue;
                 }
-                if (bufferClone.get(end) == 0) {
-                    break;
+                if (end < bufferClone.size() - 1 && bufferClone.get(end + 1) != 0) {
+                    begin = end;
+                    continue;
                 }
-                end++;
-            }
 
-            if (begin == 0 || end == bufferClone.size()) {
-                begin = end;
-                continue;
-            }
-
-            if (!(idxToPlace >= begin && idxToPlace <= end)) {
-                begin = end;
-                continue;
-            }
-
-            if (end - begin == 4 && bufferClone.get(begin) == 0 && bufferClone.get(end) == 0) {
+                if (end - begin < 2 || end - begin > 3) {
+                    begin = end;
+                    continue;
+                }
+                if (end - begin == 2 && bufferClone.get(end - 1) == 0) {
+                    begin = end;
+                    continue;
+                }
                 return true;
             }
-            begin = end;
+            begin++;
         }
 
         return false;
+    }
+
+    private static int getEnd(byte piece, int begin, List<Byte> bufferClone) {
+        int gap = 1;
+        int end = begin + 1;
+
+        while (end < bufferClone.size()) {
+            if (bufferClone.get(end) == 0) {
+                if (gap == 0) {
+                    break;
+                }
+                gap--;
+                end++;
+                continue;
+            }
+            if (bufferClone.get(end) != piece) {
+                break;
+            }
+            end++;
+        }
+
+        if (end == bufferClone.size()) {
+            end--;
+        }
+
+        while (end < begin + 1 && bufferClone.get(end) != piece) {
+            end--;
+        }
+        return end;
     }
 
     // Detect double free threes when placing a piece
