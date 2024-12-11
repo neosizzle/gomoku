@@ -273,7 +273,6 @@ public class StaticEvaluation {
             Function<Integer, Integer> directionFn,
             Function<Integer, Integer> antiDirectionFn,
             int idx,
-            int boardSize,
             int currPiece,
             byte[] board
     ) {
@@ -314,7 +313,7 @@ public class StaticEvaluation {
             int ourCaptures
     ) {
         byte[] board = gameState.getBoard().toByteArray();
-
+        GomokuUtils utils = new GomokuUtils(boardSize);
         if (ourCaptures >= 5) {
             return true;
         }
@@ -329,7 +328,8 @@ public class StaticEvaluation {
         for (List<List<Integer>> directionIndices : allIndicesDirections) {
             List<List<Byte>> directionCells = extractDimensionalCells(board, directionIndices);
 
-            for (List<Byte> extraction : directionCells) {
+            for (int i = 0; i < directionCells.size(); i++) {
+                List<Byte> extraction = directionCells.get(i);
                 int cumCount = 0;
                 for (int cell : extraction) {
                     if (cell == ourPiece) {
@@ -339,7 +339,9 @@ public class StaticEvaluation {
                     }
 
                     if (cumCount >= 5) {
+                        if (checkWinCombNoCap(board, directionIndices.get(i), utils)) {
                         return true;
+                        }
                     }
                 }
             }
@@ -348,6 +350,20 @@ public class StaticEvaluation {
         return false;
     }
 
+    public static boolean checkWinCombNoCap(byte[] board, List<Integer> indiceToCheck, GomokuUtils utils) {
+        List<Boolean> endgameCapValidationRes = new ArrayList<>();
+        for (int cumIdx : indiceToCheck) {
+            endgameCapValidationRes.add(validateNoCapDirection(utils::getBtmIdx, utils::getTopIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validateNoCapDirection(utils::getTopIdx, utils::getBtmIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validateNoCapDirection(utils::getLeftIdx, utils::getRightIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validateNoCapDirection(utils::getRightIdx, utils::getLeftIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validateNoCapDirection(utils::getBtmLeftIdx, utils::getTopRightIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validateNoCapDirection(utils::getTopRightIdx, utils::getBtmLeftIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validateNoCapDirection(utils::getTopLeftIdx, utils::getBtmRightIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validateNoCapDirection(utils::getBtmRightIdx, utils::getTopLeftIdx, cumIdx, board[cumIdx], board));
+        }
+        return !endgameCapValidationRes.contains(false);
+    }
 
     public static int staticEval(
             int boardSize,
