@@ -1,9 +1,7 @@
 package org.gomoku;
 
 public class GomokuUtils {
-
     private final int BOARD_SIZE;
-
     GomokuUtils(int board_size) {
         this.BOARD_SIZE = board_size;
     }
@@ -70,5 +68,32 @@ public class GomokuUtils {
             return -1;
         }
         return getRightIdx(btm);
+    }
+    public void prettyPrintBoard(byte[] buffer) {
+        int counter = 0;
+        for (byte b : buffer) {
+            System.out.print(" " + (int) b + " ");
+            counter++;
+            if (counter == BOARD_SIZE) {
+                System.out.println();
+                counter = 0;
+            }
+        }
+    }
+
+    public void prettyPrintBoardIndent(byte[] buffer, int indentCount) {
+        int counter = 0;
+        String indent = " ".repeat(indentCount * 2);  // Calculate the indent
+        System.out.print(indent);  // Print initial indent
+
+        for (byte b : buffer) {
+            System.out.print(" " + (int) b + " ");
+            counter++;
+            if (counter == BOARD_SIZE) {
+                System.out.println();
+                System.out.print(indent);  // Print indent for next row
+                counter = 0;
+            }
+        }
     }
 }

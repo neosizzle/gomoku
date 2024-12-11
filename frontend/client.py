@@ -28,6 +28,7 @@ class GomokuClient:
 		self.app.add_url_rule('/move', 'move', self.move, methods=['POST'])
 		self.app.add_url_rule('/move_pvp', 'move_pvp', self.move_pvp, methods=['POST'])
 		self.app.add_url_rule('/board', 'get_board', self.get_board)
+		self.app.add_url_rule('/static_eval', 'get_static_eval', self.get_static_eval)
 		self.app.add_url_rule('/reset', 'reset', self.reset, methods=['POST'])
 
 	# returns true if a capture is possible by me if i place curr_piece in idx
@@ -78,6 +79,15 @@ class GomokuClient:
 			is_end = self.game_state.is_end,
 			num_turns = self.game_state.num_turns
 			)
+
+	def get_static_eval(self):
+		p1_eval = static_eval.static_eval(self.board_size, self.game_state, 1, 2, self.game_state.p1_captures, self.game_state.p2_captures)
+		p2_eval = static_eval.static_eval(self.board_size, self.game_state, 2, 1, self.game_state.p1_captures, self.game_state.p2_captures)
+		
+		return jsonify(
+			p1_eval=p1_eval,
+			p2_eval=p2_eval
+		)
 
 	def reset(self):
 		self.meta = self.stub.GetGameMeta(game_pb2.Empty()) # TODO: should we decrecate this?

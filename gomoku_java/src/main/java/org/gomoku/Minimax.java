@@ -1,6 +1,7 @@
 package org.gomoku;
 
 import game.GameOuterClass;
+import org.gomoku.TimeFormatter;
 
 import java.util.List;
 
@@ -79,6 +80,9 @@ public class Minimax {
 
     // Basic minimax function to select the best move from the current state
     public static GameOuterClass.GameState basicMinimax(GameOuterClass.GameState state, int boardSize, int currPiece, int maxPiece) {
+        // Decorators does not exist in java, so we have to manually measure time
+        long startTime = System.nanoTime();  // Start timing
+
         int depth = (state.getNumTurns() > 4) ? 3 : 2;
         // Generate move tree (you'll need a function for move generation in Java)
         MoveGeneration moveGeneration = new MoveGeneration(boardSize);
@@ -99,11 +103,20 @@ public class Minimax {
             }
         }
 
+        GameOuterClass.GameState res = GameOuterClass.GameState.newBuilder().build();
         if (maxScoreIdx >= 0 && maxScoreIdx < rootChildren.size()) {
-            return rootChildren.get(maxScoreIdx);
+            res =  rootChildren.get(maxScoreIdx);
         } else {
-            return state;
-        } // Return the best move (child state)
+            res = state;
+        }
+        
+        long endTime = System.nanoTime();    // End timing
+        long durationNs = endTime - startTime; // Duration in nanoseconds
+        String formattedDuration = TimeFormatter.formatTime(durationNs);
+
+        System.out.println("Function basicMinimax took " + formattedDuration);
+
+        return res;
     }
 
     // You can use this as a helper to time your minimax method

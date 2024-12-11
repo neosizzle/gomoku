@@ -100,6 +100,15 @@
             font-size: 19px;
         }
 
+        #game-container {
+            display: flex;
+            justify-content: space-evenly;
+        }
+
+        .stats-move-history { 
+            max-height: 120px;
+            overflow: auto;
+        }
     </style>
 </head>
 <body>
@@ -117,6 +126,59 @@
         Turn <span id="num_turns">0</span>
     </div>
     
+    {% if mode == "pvp" %}
+    <div id="game-container">
+        <div>
+            <table id="board">
+                {% for y in range(board_size) %}
+                <tr>
+                    {% for x in range(board_size) %}
+                    <td data-x="{{ x }}" data-y="{{ y }}">
+                        {% if board[y][x] == 0 %}
+                            &nbsp; 
+                        {% elif board[y][x] == 1 %}
+                            <span class="black-dot">&#9679;</span>
+        
+                        {% elif board[y][x] == 2 %}
+                            <span class="white-dot">&#9675;</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </table>
+            <div id="turn-display">
+                Current turn: Player &nbsp; <span id="turn-display-player">1</span>
+            </div>
+        </div>
+
+        <!--P1 stats-->
+        <div>
+            <h3>Player 1 stats</h3>
+            <div><h4>Suggest move counter: &nbsp;</h4> <span id="p1-suggest-move-counter">0</span></div>
+            <div><h4>Advantage: &nbsp;</h4> <span id="p1-advantage">0</span></div>
+            <div><h4>Move history: &nbsp;</h4>
+                <div class="stats-move-history" id="p1-move-history">
+
+                </div>
+            </div>
+
+        </div>
+
+        <!--P2 stats-->
+        <div>
+            <h3>Player 2 stats</h3>
+            <div><h4>Suggest move counter: &nbsp;</h4> <span id="p2-suggest-move-counter">0</span></div>
+            <div><h4>Advantage: &nbsp;</h4> <span id="p2-advantage">0</span></div>
+            <div><h4>Move history: &nbsp;</h4>
+                <div class="stats-move-history" id="p2-move-history">
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    {% else %}
     <table id="board">
         {% for y in range(board_size) %}
         <tr>
@@ -135,11 +197,9 @@
         </tr>
         {% endfor %}
     </table>
+    {% endif %}    
 
     {% if mode == "pvp" %}
-    <div id="turn-display">
-        Current turn: Player &nbsp; <span id="turn-display-player">1</span>
-    </div>
     <div id="suggest-move">
         Suggest move
     </div>
@@ -208,6 +268,12 @@
                     .catch(error => console.error('Error:', error));                    
                 }
                 else {
+                    if (resolved_move == false) {
+                        console.log("resolve move lock")
+                        return
+                    }
+                    resolved_move = false
+                    
                     fetch('/move_pvp', {
                     method: 'POST',
                     headers: {
@@ -222,14 +288,38 @@
                             return
                         }
                         updateGameBoard();
+                        updatePlayerScores();
+                        updateMoveHistory(current_player_pvp, x, y)
                         if (current_player_pvp == 1) { current_player_pvp = 2 }
                         else { current_player_pvp = 1 }
                         document.getElementById('turn-display-player').innerHTML= current_player_pvp
+                        resolved_move = true
                     })
                     .catch(error => console.error('Error:', error));    
                 }
             });
         });
+
+        // call static eval from backend to get current player scores
+        function updatePlayerScores() {
+            fetch('/static_eval')
+                .then(response => response.json())
+                .then(data => {
+                    const p1_eval = data.p1_eval
+                    const p2_eval = data.p2_eval
+
+                    document.getElementById('p1-advantage').innerHTML = p1_eval
+                    document.getElementById('p2-advantage').innerHTML = p2_eval
+                })
+                .catch(error => console.error('Error fetching static_eval:', error));
+        }
+
+        // update move history
+        function updateMoveHistory(piece, x, y) {
+            let newMoveDiv = document.createElement('div');
+            newMoveDiv.textContent = `x ${x}, y ${y}`;
+           document.getElementById(`p${piece}-move-history`).appendChild(newMoveDiv)
+        }
 
         // Retrieve data from backend to update rendered board
         function updateGameBoard() {
@@ -329,6 +419,11 @@
                         }
                     }
                 }
+
+                // increment suggest move counter for that player
+                const curr_suggest_move_ctr = parseInt(document.getElementById(`p${current_player_pvp}-suggest-move-counter`).innerHTML)
+                document.getElementById(`p${current_player_pvp}-suggest-move-counter`).innerHTML = (curr_suggest_move_ctr + 1)
+
                 resolved_move = true
 
             })
