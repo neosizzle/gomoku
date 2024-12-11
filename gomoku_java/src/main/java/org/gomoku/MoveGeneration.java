@@ -6,6 +6,8 @@ import game.GameOuterClass;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 public class MoveGeneration {
 
@@ -73,10 +75,12 @@ public class MoveGeneration {
 
     // Helper method to concatenate two lists with the first list reversed
     private static List<Integer> concatReverse(List<Integer> list1, List<Integer> list2) {
-        List<Integer> result = new ArrayList<>(list1);
-        for (int i = list2.size() - 1; i >= 0; i--) {
+        List<Integer> result = new ArrayList<>();
+        for (int i = list1.size() - 1; i >= 0; --i)
+            result.add(list1.get(i));
+        for (int i = 0; i < list2.size(); ++i)
             result.add(list2.get(i));
-        }
+
         return result;
     }
 
@@ -170,10 +174,10 @@ public class MoveGeneration {
     public boolean hasThreat(int inputIdx, int BOARD_SIZE, byte piece, byte[] board) {
         // Generate local expansions of current piece
         List<List<Integer>> localExpansions = expandAllDirections(inputIdx, BOARD_SIZE);
-
+        
         // Group pairs of directions together
         List<List<Integer>> localExpansionGrouping = groupLocalExpansions(localExpansions);
-
+        
         List<List<Byte>> cellValueBuffers = new ArrayList<>();
         List<Integer> groupIndices = new ArrayList<>();
 
@@ -404,10 +408,10 @@ public class MoveGeneration {
 
             // Check for win condition
             int isEnd = 0;
-            if (piece == 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 1, newP1Captures)) {
+            if (piece == (byte) 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 1, newP1Captures)) {
                 isEnd = 1;
             }
-            if (piece == 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 2, newP2Captures)) {
+            if (piece == (byte) 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 2, newP2Captures)) {
                 isEnd = 2;
             }
 
@@ -428,10 +432,10 @@ public class MoveGeneration {
 
         // Check for win condition
         int isEnd = 0;
-        if (piece == 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newGameState, 1, (int) state.getP1Captures())) {
+        if (piece == (byte) 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newGameState, 1, (int) state.getP1Captures())) {
             isEnd = 1;
         }
-        if (piece == 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newGameState, 2, (int) state.getP2Captures())) {
+        if (piece == (byte) 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newGameState, 2, (int) state.getP2Captures())) {
             isEnd = 2;
         }
 
@@ -458,19 +462,18 @@ public class MoveGeneration {
             }
 
             // Get all indices in a 2-cell range in all directions
-            List<List<Integer>> directionalIndices = expandAllDirections(i, 2);
-            for (List<Integer> valList : directionalIndices) {
-                for (int val : valList) {
-                    if (currBoard[val] != 0) {
-                        continue;
-                    }
+            List<Integer> directionalIndices = expandAllDirections(i, 2).stream().flatMap(List::stream)
+            .collect(Collectors.toList());
+            for (Integer val : directionalIndices) {
+                if (currBoard[val] != 0) {
+                    continue;
+                }
 
-                    initialSearchIndices.add(val);
+                initialSearchIndices.add(val);
 
-                    // Add to threat indices if placing here forms/blocks a threat
-                    if (hasThreat(val, boardSize, piece, currBoard)) {
-                        threatSearchIndices.add(val);
-                    }
+                // Add to threat indices if placing here forms/blocks a threat
+                if (hasThreat(val, boardSize, piece, currBoard)) {
+                    threatSearchIndices.add(val);
                 }
             }
         }
@@ -481,7 +484,7 @@ public class MoveGeneration {
         for (int i : indicesToCheck) {
             GameOuterClass.GameState newState = placePieceAttempt(i, piece, state, boardSize, true); // Assuming ignoreSelfCaptured is true
             if (newState != null) {
-                result.add(newState);
+                 result.add(newState);
             }
         }
 

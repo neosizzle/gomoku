@@ -423,9 +423,9 @@ def main():
 	BOARD_SIZE = 10
 
 	board = bytes([
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+		1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+		1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		1, 0, 0, 1, 0, 0, 0, 0, 0, 0,
 		0, 0, 1, 1, 1, 1, 1, 0, 0, 0,
 		0, 0, 2, 0, 0, 0, 2, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -437,8 +437,8 @@ def main():
 	)
 	game_state = game_pb2.GameState(
 		board=board,
-		p1_captures=0,
-		p2_captures=0,
+		p1_captures=4,
+		p2_captures=3,
 		num_turns=0,
 		is_end=False,
 		time_to_think_ns=0
@@ -447,8 +447,8 @@ def main():
 	# check_valid_win_combo(BOARD_SIZE, game_state)
 	# print(f"{calculate_open_bonus([0, 0, 0, 0, 0, 0, 0, 0, 1], 1, 2)}")
 
-	# score = static_eval(BOARD_SIZE, game_state, 2, 1, game_state.p2_captures, game_state.p1_captures)
-	score = 123
+	score = static_eval(BOARD_SIZE, game_state, 2, 1, game_state.p2_captures, game_state.p1_captures)
+	# score = 123
 
 	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p2_captures)}")
 	# print(validate_potential_nocap_direction(get_right_idx, get_left_idx, 31, BOARD_SIZE, board[31], board))

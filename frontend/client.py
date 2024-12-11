@@ -11,7 +11,7 @@ class GomokuClient:
 		self.app = Flask('game_app', template_folder='./frontend/templates')
 		self.channel = grpc.insecure_channel('localhost:50051')
 		self.stub = game_pb2_grpc.GameStub(self.channel)
-		self.board_size = 19
+		self.board_size = 9
 		self.meta = self.stub.GetGameMeta(game_pb2.Empty()) # TODO: should we decrecate this?
 		self.game_state = self.stub.GetLastGameState(game_pb2.Empty())
 		self.board = self.convert_to_2d(self.bytes_to_int_array(self.game_state.board), self.board_size)
