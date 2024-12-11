@@ -479,8 +479,8 @@ public class MoveGeneration {
         byte[] currBoard = state.getBoard().toByteArray(); // Assuming `getBoard()` returns a 1D array representation
         int dims = boardSize * boardSize;
         List<GameOuterClass.GameState> result = new ArrayList<>();
-        Set<Integer> initialSearchIndices = new HashSet<>();
-        Set<Integer> threatSearchIndices = new HashSet<>();
+        Set<Integer> initialSearchIndices = new LinkedHashSet<>();
+        Set<Integer> threatSearchIndices = new LinkedHashSet<>();
 
         // Check if the game is already in an end state
         if (state.getIsEnd() != 0) {
