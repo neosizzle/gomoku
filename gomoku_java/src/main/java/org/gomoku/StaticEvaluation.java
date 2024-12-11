@@ -350,17 +350,71 @@ public class StaticEvaluation {
         return false;
     }
 
+    public static boolean validatePotentialNoCapDirection(
+            Function<Integer, Integer> directionFn,
+            Function<Integer, Integer> antiDirectionFn,
+            int idx,
+            int currPiece,
+            byte[] board) {
+
+        if (currPiece != 1 && currPiece != 2) {
+            return true;
+        }
+
+        int checkCellIdx = directionFn.apply(idx);
+        if (checkCellIdx < 0 || checkCellIdx >= board.length) {
+            return false;
+        }
+        byte checkCell = board[checkCellIdx];
+
+        if (checkCell == currPiece) {
+            int nextCellIdx = directionFn.apply(checkCellIdx);
+            if (nextCellIdx < 0 || nextCellIdx >= board.length) {
+                return false;
+            }
+            byte checkNeighCell = board[nextCellIdx];
+
+            if (checkNeighCell != currPiece && checkNeighCell != 0) {
+                int antiDirectCell = antiDirectionFn.apply(idx);
+                if (antiDirectCell < 0 || antiDirectCell >= board.length) {
+                    return false;
+                }
+                byte antiCell = board[antiDirectCell];
+                return (antiCell == currPiece || antiCell == 0);
+            }
+        }
+
+        if (checkCell != 0 && checkCell != -1 && checkCell != currPiece) {
+            int antiDirIdx = antiDirectionFn.apply(idx);
+            if (antiDirIdx < 0 || antiDirIdx >= board.length) {
+                return false;
+            }
+            byte checkNeighCell = board[antiDirIdx];
+
+            if (checkNeighCell == currPiece) {
+                int secondAntiDirIdx = antiDirectionFn.apply(antiDirIdx);
+                if (secondAntiDirIdx < 0 || secondAntiDirIdx >= board.length) {
+                    return false;
+                }
+                byte secondCheckNeighCell = board[secondAntiDirIdx];
+
+                return secondCheckNeighCell != 0;
+            }
+        }
+
+        return true;
+    }
     public static boolean checkWinCombNoCap(byte[] board, List<Integer> indiceToCheck, GomokuUtils utils) {
         List<Boolean> endgameCapValidationRes = new ArrayList<>();
         for (int cumIdx : indiceToCheck) {
-            endgameCapValidationRes.add(validateNoCapDirection(utils::getBtmIdx, utils::getTopIdx, cumIdx, board[cumIdx], board));
-            endgameCapValidationRes.add(validateNoCapDirection(utils::getTopIdx, utils::getBtmIdx, cumIdx, board[cumIdx], board));
-            endgameCapValidationRes.add(validateNoCapDirection(utils::getLeftIdx, utils::getRightIdx, cumIdx, board[cumIdx], board));
-            endgameCapValidationRes.add(validateNoCapDirection(utils::getRightIdx, utils::getLeftIdx, cumIdx, board[cumIdx], board));
-            endgameCapValidationRes.add(validateNoCapDirection(utils::getBtmLeftIdx, utils::getTopRightIdx, cumIdx, board[cumIdx], board));
-            endgameCapValidationRes.add(validateNoCapDirection(utils::getTopRightIdx, utils::getBtmLeftIdx, cumIdx, board[cumIdx], board));
-            endgameCapValidationRes.add(validateNoCapDirection(utils::getTopLeftIdx, utils::getBtmRightIdx, cumIdx, board[cumIdx], board));
-            endgameCapValidationRes.add(validateNoCapDirection(utils::getBtmRightIdx, utils::getTopLeftIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validatePotentialNoCapDirection(utils::getBtmIdx, utils::getTopIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validatePotentialNoCapDirection(utils::getTopIdx, utils::getBtmIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validatePotentialNoCapDirection(utils::getLeftIdx, utils::getRightIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validatePotentialNoCapDirection(utils::getRightIdx, utils::getLeftIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validatePotentialNoCapDirection(utils::getBtmLeftIdx, utils::getTopRightIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validatePotentialNoCapDirection(utils::getTopRightIdx, utils::getBtmLeftIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validatePotentialNoCapDirection(utils::getTopLeftIdx, utils::getBtmRightIdx, cumIdx, board[cumIdx], board));
+            endgameCapValidationRes.add(validatePotentialNoCapDirection(utils::getBtmRightIdx, utils::getTopLeftIdx, cumIdx, board[cumIdx], board));
         }
         return !endgameCapValidationRes.contains(false);
     }
