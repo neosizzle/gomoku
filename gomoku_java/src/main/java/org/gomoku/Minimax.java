@@ -7,7 +7,7 @@ import java.util.List;
 
 public class Minimax {
     public static int minimaxEval(
-            List<List<Object>> moveTree,
+            List<GomokuUtils.GameStateNode> moveTree,
             GameOuterClass.GameState currState,
             int BOARD_SIZE,
             boolean isMax,
@@ -25,12 +25,12 @@ public class Minimax {
         // Check if the current state exists in the move tree
         int stateNodeIndex = -1;
         for (int i = 0; i < moveTree.size(); i++) {
-            List<Object> node = moveTree.get(i);
-            if (node.get(1) == null) {
+            GomokuUtils.GameStateNode node = moveTree.get(i);
+            if (node.children() == null) {
                 continue;
             }
-            GameOuterClass.GameState nodeState = (GameOuterClass.GameState) node.get(0);
-            if (nodeState.getBoard().equals(currState.getBoard()) && ((List<?>) node.get(1)).size() > 0) {
+            GameOuterClass.GameState nodeState = (GameOuterClass.GameState) node.state();
+            if (nodeState.getBoard().equals(currState.getBoard()) && !node.children().isEmpty()) {
                 stateNodeIndex = i;
                 break;
             }
@@ -42,8 +42,8 @@ public class Minimax {
         }
 
         // Initialize idealScore based on whether we're maximizing or minimizing
-        List<Object> moveTreeNode = moveTree.get(stateNodeIndex);
-        List<GameOuterClass.GameState> moveTreeChildren = (List<GameOuterClass.GameState>) moveTreeNode.get(1);
+        GomokuUtils.GameStateNode moveTreeNode = moveTree.get(stateNodeIndex);
+        List<GameOuterClass.GameState> moveTreeChildren = moveTreeNode.children();
 
         int idealScore;
         GameOuterClass.GameState selectedState;
@@ -86,9 +86,9 @@ public class Minimax {
         int depth = (state.getNumTurns() > 4) ? 3 : 2;
         // Generate move tree (you'll need a function for move generation in Java)
         MoveGeneration moveGeneration = new MoveGeneration(boardSize);
-        List<List<Object>> moveTree = moveGeneration.generateMoveTree(state, boardSize, (byte) currPiece, depth);
-        GameOuterClass.GameState rootNode = (GameOuterClass.GameState) moveTree.get(0).get(0);
-        List<GameOuterClass.GameState> rootChildren = (List<GameOuterClass.GameState>) moveTree.get(0).get(1);
+        List<GomokuUtils.GameStateNode> moveTree = moveGeneration.generateMoveTree(state, boardSize, (byte) currPiece, depth);
+        GameOuterClass.GameState rootNode =  moveTree.get(0).state();
+        List<GameOuterClass.GameState> rootChildren =  moveTree.get(0).children();
 
         int maxScore = Integer.MIN_VALUE;
         int maxScoreIdx = -1;

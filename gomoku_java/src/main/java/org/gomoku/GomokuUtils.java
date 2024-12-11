@@ -1,5 +1,9 @@
 package org.gomoku;
 
+import game.GameOuterClass;
+
+import java.util.List;
+
 public class GomokuUtils {
     private final int BOARD_SIZE;
     GomokuUtils(int board_size) {
@@ -95,5 +99,7 @@ public class GomokuUtils {
                 counter = 0;
             }
         }
+    }
+    public record GameStateNode(game.GameOuterClass.GameState state, List<GameOuterClass.GameState> children) {
     }
 }

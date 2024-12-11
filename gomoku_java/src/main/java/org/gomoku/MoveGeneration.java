@@ -3,10 +3,10 @@ package org.gomoku;
 
 import com.google.protobuf.ByteString;
 import game.GameOuterClass;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public class MoveGeneration {
@@ -534,8 +534,8 @@ public class MoveGeneration {
         return result;
     }
 
-    public List<List<Object>> generateMoveTree(GameOuterClass.GameState state, int boardSize, byte piece, int depth) {
-        List<List<Object>> result = new ArrayList<>();
+    public List<GomokuUtils.GameStateNode> generateMoveTree(GameOuterClass.GameState state, int boardSize, byte piece, int depth) {
+        List<GomokuUtils.GameStateNode> result = new ArrayList<>();
 
         for (int i = 0; i < depth; i++) {
             byte currPiece = (i % 2 == 0) ? piece : (byte) (piece ==  (byte) 1 ? (byte) 2 : (byte) 1);
@@ -543,21 +543,19 @@ public class MoveGeneration {
             // Generate first depth
             if (result.isEmpty()) {
                 List<GameOuterClass.GameState> rootChildren = generatePossibleMoves(state, boardSize, currPiece, true);
-                result.add(Arrays.asList(state, rootChildren));
+                result.add(new GomokuUtils.GameStateNode(state, rootChildren));
 
                 for (GameOuterClass.GameState child : rootChildren) {
-                    result.add(Arrays.asList(child, null));
+                    result.add(new GomokuUtils.GameStateNode(state, null));
                 }
             } else {
                 List<List<GameOuterClass.GameState>> newLeaves = new ArrayList<>();
 
                 // Find leaves and generate their children
-                for (int j = 0; j < result.size(); j++) {
-                    List<Object> node = result.get(j);
-                    if (node.get(1) == null) {
-                        GameOuterClass.GameState leafState = (GameOuterClass.GameState) node.get(0);
-                        List<GameOuterClass.GameState> leafChildren = generatePossibleMoves(leafState, boardSize, currPiece, true);
-                        node.set(1, leafChildren);
+                for (GomokuUtils.GameStateNode node : result) {
+                    if (node.children() == null) {
+                        List<GameOuterClass.GameState> leafChildren = generatePossibleMoves(node.state(), boardSize, currPiece, true);
+                        result.set(result.indexOf(node), new GomokuUtils.GameStateNode(node.state(), leafChildren));
                         newLeaves.add(leafChildren);
                     }
                 }
@@ -565,7 +563,7 @@ public class MoveGeneration {
                 // Add new leaves to the result
                 for (List<GameOuterClass.GameState> leafList : newLeaves) {
                     for (GameOuterClass.GameState leaf : leafList) {
-                        result.add(Arrays.asList(leaf, null));
+                        result.add(new GomokuUtils.GameStateNode(leaf, null));
                     }
                 }
             }
