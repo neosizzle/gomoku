@@ -392,26 +392,26 @@ def static_eval(BOARD_SIZE, game_state, our_piece, enemy_piece, our_captures, en
 	# my_score = -1
 	print(f"my_score {my_score}")
 	final_score = my_score
-	final_score += our_captures * 2
+	final_score += pow(game_state.num_turns, our_captures)
 
 
 	enemy_score = static_eval_directional(BOARD_SIZE, game_state, enemy_piece, our_piece, moves_next)
 	# enemy_score = -1
 	print(f"enemy_score {enemy_score}")
 	final_score -= enemy_score
-	final_score -= enemy_captures * 2
+	final_score -= pow(game_state.num_turns, enemy_captures)
 
 	if check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures):
 		if our_piece == 1:
-			final_score += 6969
+			final_score = 2147483647
 		else:
-			final_score -= 6969
+			final_score = -2147483648
 
 	if check_win_condition(BOARD_SIZE, game_state, 2, game_state.p2_captures):
 		if our_piece == 2:
-			final_score += 6969
+			final_score = 2147483647
 		else:
-			final_score -= 6969
+			final_score = -2147483648
 
 	pretty_print_board(game_state.board, BOARD_SIZE)
 	print("==========================")
@@ -420,26 +420,25 @@ def static_eval(BOARD_SIZE, game_state, our_piece, enemy_piece, our_captures, en
 def main():
 	
 	# some metadata here
-	BOARD_SIZE = 10
+	BOARD_SIZE = 9
 
 	board = bytes([
-		1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
-		1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		1, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-		0, 0, 1, 1, 1, 1, 1, 0, 0, 0,
-		0, 0, 2, 0, 0, 0, 2, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 1, 0, 0, 0, 0,
+		0, 0, 0, 0, 2, 1, 0, 1, 2,
+		0, 0, 0, 0, 1, 0, 0, 0, 1,
+		0, 0, 0, 1, 0, 2, 0, 1, 0,
+		0, 0, 1, 0, 2, 0, 0, 2, 0,
+		0, 1, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0
 	]
 	)
 	game_state = game_pb2.GameState(
 		board=board,
-		p1_captures=4,
-		p2_captures=3,
-		num_turns=0,
+		p1_captures=2,
+		p2_captures=1,
+		num_turns=21,
 		is_end=False,
 		time_to_think_ns=0
 	)
@@ -450,7 +449,8 @@ def main():
 	score = static_eval(BOARD_SIZE, game_state, 2, 1, game_state.p2_captures, game_state.p1_captures)
 	# score = 123
 
-	print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p2_captures)}")
+	print(check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures))
+	# print(f"score {score}, 1 won? {check_win_condition(BOARD_SIZE, game_state, 1, game_state.p1_captures)}, 2 won? {check_win_condition(BOARD_SIZE, game_state, 2, game_state.p2_captures)}")
 	# print(validate_potential_nocap_direction(get_right_idx, get_left_idx, 31, BOARD_SIZE, board[31], board))
 
 main()

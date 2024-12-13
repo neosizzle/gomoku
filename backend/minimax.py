@@ -127,19 +127,18 @@ def main():
 	# ]
 	# )
 
-	BOARD_SIZE = 10
+	BOARD_SIZE = 9
 
 	board = bytes([
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 0, 0, 1, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 2, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0
 	])
 
 
@@ -147,11 +146,11 @@ def main():
 	game_state = game_pb2.GameState(
 		board=board,
 		p1_captures=0,
-		p2_captures=0,
-		num_turns=1,
+		p2_captures=1,
+		num_turns=7,
 		is_end=False,
 		time_to_think_ns=0
 	)
 	suggested_state = basic_minimax(game_state, BOARD_SIZE, 2, 2)
 	utils.pretty_print_board(suggested_state.board, BOARD_SIZE)
-# main()
+main()

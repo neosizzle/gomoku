@@ -363,21 +363,21 @@ public class StaticEvaluation {
 
         int checkCellIdx = directionFn.apply(idx);
         if (checkCellIdx < 0 || checkCellIdx >= board.length) {
-            return false;
+            return true;
         }
         byte checkCell = board[checkCellIdx];
 
         if (checkCell == currPiece) {
             int nextCellIdx = directionFn.apply(checkCellIdx);
             if (nextCellIdx < 0 || nextCellIdx >= board.length) {
-                return false;
+                return true;
             }
             byte checkNeighCell = board[nextCellIdx];
 
             if (checkNeighCell != currPiece && checkNeighCell != 0) {
                 int antiDirectCell = antiDirectionFn.apply(idx);
                 if (antiDirectCell < 0 || antiDirectCell >= board.length) {
-                    return false;
+                    return true;
                 }
                 byte antiCell = board[antiDirectCell];
                 return (antiCell == currPiece || antiCell == 0);
@@ -387,14 +387,14 @@ public class StaticEvaluation {
         if (checkCell != 0 && checkCell != -1 && checkCell != currPiece) {
             int antiDirIdx = antiDirectionFn.apply(idx);
             if (antiDirIdx < 0 || antiDirIdx >= board.length) {
-                return false;
+                return true;
             }
             byte checkNeighCell = board[antiDirIdx];
 
             if (checkNeighCell == currPiece) {
                 int secondAntiDirIdx = antiDirectionFn.apply(antiDirIdx);
                 if (secondAntiDirIdx < 0 || secondAntiDirIdx >= board.length) {
-                    return false;
+                    return true;
                 }
                 byte secondCheckNeighCell = board[secondAntiDirIdx];
 
@@ -431,19 +431,19 @@ public class StaticEvaluation {
 
 
         int myScore = staticEvalDirectional(boardSize, gameState, (byte)ourPiece, (byte)enemyPiece, movesNext);
-        int finalScore = myScore + ourCaptures * 2;
+        int finalScore = myScore + (int) Math.pow(gameState.getNumTurns(), ourCaptures);
 
         int enemyScore = staticEvalDirectional(boardSize, gameState, (byte)enemyPiece, (byte)ourPiece, movesNext);
         finalScore -= enemyScore;
-        finalScore -= enemyCaptures * 2;
+        finalScore -= (int) Math.pow(gameState.getNumTurns(), enemyCaptures);
 
         // Kill shot
         if (checkWinCondition(boardSize, gameState, 1, (int) gameState.getP1Captures())) {
-            finalScore += (ourPiece == 1) ? 6969 : -6969;
+            finalScore = (ourPiece == 1) ? Integer.MAX_VALUE : Integer.MIN_VALUE;
         }
 
         if (checkWinCondition(boardSize, gameState, 2, (int) gameState.getP2Captures())) {
-            finalScore += (ourPiece == 2) ? 6969 : -6969;
+            finalScore = (ourPiece == 2) ? Integer.MAX_VALUE : Integer.MIN_VALUE;
         }
 
         return finalScore;
