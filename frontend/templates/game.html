@@ -162,6 +162,11 @@
 
                 </div>
             </div>
+            {% if variant == "pro" %}
+            <div id="p1-timer">
+                10
+            </div>
+            {% endif %}    
 
         </div>
 
@@ -174,6 +179,11 @@
                 <div class="stats-move-history" id="p2-move-history">
                 </div>
             </div>
+            {% if variant == "pro" %}
+            <div id="p2-timer">
+                10
+            </div>
+            {% endif %}   
         </div>
         
     </div>
@@ -430,6 +440,20 @@
             .catch(error => console.error('Error:', error));    
         }
         document.getElementById('suggest-move').addEventListener('click', () => suggest_move())
+
+        // start timer
+        countdown = setInterval(() => {
+            let timer_elem = document.getElementById(`p${current_player_pvp}-timer`)
+            let curr_timer = parseInt(timer_elem.innerHTML)
+            if (curr_timer > 0) {
+                timer_elem.innerHTML = curr_timer - 1
+            }
+            else {
+                clearInterval(countdown);
+                alert(`TIMEOUT by player ${current_player_pvp}`)
+                reset_and_redirect()
+            }
+        }, 1000);
 
     </script>
 </body>
