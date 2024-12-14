@@ -6,14 +6,22 @@ import game.GameOuterClass;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Vector;
 import java.util.function.Function;
 
 public class StaticEvaluation {
+
+    // preallocation constant for directionCells, should be big enough to
+    // at the maximum of all elements in allIndicesDirections
+    // assuming we handle up to size 19x19, the max should be size 19
+    static final int DIR_CELLS_CAP = 19;
+    static final byte FIN_BYTE = (byte) 255;
     public static List<List<Byte>> extractDimensionalCells(byte[] board, List<List<Integer>> rowIndices) {
-        List<List<Byte>> directionCells = new ArrayList<>();
+        List<List<Byte>> directionCells = new ArrayList<>(DIR_CELLS_CAP);
         for (List<Integer> rowIndexSet : rowIndices) {
-            List<Byte> rowCells = new ArrayList<>();
+            List<Byte> rowCells = new ArrayList<>(DIR_CELLS_CAP);
             for (int index : rowIndexSet) {
                 rowCells.add(board[index]);
             }
@@ -22,11 +30,20 @@ public class StaticEvaluation {
         return directionCells;
     }
 
+    public static void extractDimensionalCells_w(byte[] board, List<List<Integer>> rowIndices, List<List<Byte>> directionCellsScratch) {
+        for (int i = 0; i < rowIndices.size(); i++) {
+            List<Integer> rowIndexSet = rowIndices.get(i);
+            for (int j = 0; j < rowIndexSet.size(); j++) {
+                directionCellsScratch.get(i).set(j, board[rowIndexSet.get(j)]);
+            }
+        }
+    }
+
     // Generate row indices
     public static List<List<Integer>> generateRowIndices(int boardSize) {
-        List<List<Integer>> rowIndices = new ArrayList<>();
+        List<List<Integer>> rowIndices = new ArrayList<>(boardSize);
         for (int i = 0; i < boardSize; i++) {
-            List<Integer> currRow = new ArrayList<>();
+            List<Integer> currRow = new ArrayList<>(boardSize);
             for (int j = 0; j < boardSize; j++) {
                 currRow.add(i * boardSize + j);
             }
@@ -37,9 +54,9 @@ public class StaticEvaluation {
 
     // Generate column indices
     public static List<List<Integer>> generateColumnIndices(int boardSize) {
-        List<List<Integer>> columnIndices = new ArrayList<>();
+        List<List<Integer>> columnIndices = new ArrayList<>(boardSize);
         for (int i = 0; i < boardSize; i++) {
-            List<Integer> currCol = new ArrayList<>();
+            List<Integer> currCol = new ArrayList<>(boardSize);
             for (int j = 0; j < boardSize; j++) {
                 currCol.add(i + (boardSize * j));
             }
@@ -50,7 +67,7 @@ public class StaticEvaluation {
 
     // Generate diagonal indices (normal direction)
     public static List<List<Integer>> generateDiagIndices(int boardSize) {
-        List<List<Integer>> diagIndices = new ArrayList<>();
+        List<List<Integer>> diagIndices = new ArrayList<>(boardSize);
         int combs = boardSize + (boardSize - 1);
         int counter = 1;
         boolean directionUp = true;
@@ -63,7 +80,7 @@ public class StaticEvaluation {
 
             int smallestElem = directionUp ? diagIndices.get(i - 1).get(0) + 1 : diagIndices.get(i - 1).get(1) + 1;
 
-            List<Integer> buffer = new ArrayList<>();
+            List<Integer> buffer = new ArrayList<>(counter);
             for (int j = 0; j < counter; j++) {
                 buffer.add(smallestElem + (j * (boardSize - 1)));
             }
@@ -85,7 +102,7 @@ public class StaticEvaluation {
 
     // Generate inverse diagonal indices
     public static List<List<Integer>> generateDiagIndicesInverse(int boardSize) {
-        List<List<Integer>> diagIndices = new ArrayList<>();
+        List<List<Integer>> diagIndices = new ArrayList<>(boardSize);
         int combs = boardSize + (boardSize - 1);
         int counter = 1;
         boolean directionUp = true;
@@ -97,7 +114,7 @@ public class StaticEvaluation {
             }
             int smallestElem = directionUp ? diagIndices.get(i - 1).get(0) - 1 : diagIndices.get(i - 1).get(1) - 1;
 
-            List<Integer> buffer = new ArrayList<>();
+            List<Integer> buffer = new ArrayList<>(counter);
             for (int j = 0; j < counter; j++) {
                 buffer.add(smallestElem + (j * (boardSize + 1)));
             }
@@ -217,7 +234,7 @@ public class StaticEvaluation {
         int scoreRes = countPieces(board, ourPiece);
 
         // Generate indices for all directions
-        List<List<List<Integer>>> allIndicesDirections = new ArrayList<>();
+        List<List<List<Integer>>> allIndicesDirections = new ArrayList<>(4);
         allIndicesDirections.add(generateRowIndices(boardSize));
         allIndicesDirections.add(generateColumnIndices(boardSize));
         allIndicesDirections.add(generateDiagIndicesInverse(boardSize));
@@ -319,7 +336,7 @@ public class StaticEvaluation {
         }
 
         // Generate indices for all directions
-        List<List<List<Integer>>> allIndicesDirections = new ArrayList<>();
+        List<List<List<Integer>>> allIndicesDirections = new ArrayList<>(4);
         allIndicesDirections.add(generateRowIndices(boardSize));
         allIndicesDirections.add(generateColumnIndices(boardSize));
         allIndicesDirections.add(generateDiagIndicesInverse(boardSize));
@@ -405,7 +422,7 @@ public class StaticEvaluation {
         return true;
     }
     public static boolean checkWinCombNoCap(byte[] board, List<Integer> indiceToCheck, GomokuUtils utils) {
-        List<Boolean> endgameCapValidationRes = new ArrayList<>();
+        List<Boolean> endgameCapValidationRes = new ArrayList<>(8 * (indiceToCheck.size()));
         for (int cumIdx : indiceToCheck) {
             endgameCapValidationRes.add(validatePotentialNoCapDirection(utils::getBtmIdx, utils::getTopIdx, cumIdx, board[cumIdx], board));
             endgameCapValidationRes.add(validatePotentialNoCapDirection(utils::getTopIdx, utils::getBtmIdx, cumIdx, board[cumIdx], board));
@@ -428,6 +445,7 @@ public class StaticEvaluation {
             int enemyCaptures
     ) {
         int movesNext = (gameState.getNumTurns() % 2 == 0) ? 1 : 2;
+        long startTime = System.nanoTime();  // Start timing
 
 
         int myScore = staticEvalDirectional(boardSize, gameState, (byte)ourPiece, (byte)enemyPiece, movesNext);
@@ -446,6 +464,10 @@ public class StaticEvaluation {
             finalScore = (ourPiece == 2) ? Integer.MAX_VALUE : Integer.MIN_VALUE;
         }
 
+        long endTime = System.nanoTime();    // End timing
+        long durationNs = endTime - startTime; // Duration in nanoseconds
+        String formattedDuration = TimeFormatter.formatTime(durationNs);
+        System.out.println("Function staticEval took " + formattedDuration);
         return finalScore;
     }
 }
