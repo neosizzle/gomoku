@@ -30,15 +30,6 @@ public class StaticEvaluation {
         return directionCells;
     }
 
-    public static void extractDimensionalCells_w(byte[] board, List<List<Integer>> rowIndices, List<List<Byte>> directionCellsScratch) {
-        for (int i = 0; i < rowIndices.size(); i++) {
-            List<Integer> rowIndexSet = rowIndices.get(i);
-            for (int j = 0; j < rowIndexSet.size(); j++) {
-                directionCellsScratch.get(i).set(j, board[rowIndexSet.get(j)]);
-            }
-        }
-    }
-
     // Generate row indices
     public static List<List<Integer>> generateRowIndices(int boardSize) {
         List<List<Integer>> rowIndices = new ArrayList<>(boardSize);
@@ -139,24 +130,33 @@ public class StaticEvaluation {
         int penaltyStartIdx = startIdx;
         int res = 0;
         while (penaltyEndIdx != endIdx) {
+            // move penalty_end to either the blank or end 
             while (penaltyEndIdx != endIdx && extraction[penaltyEndIdx] != 0) {
                 penaltyEndIdx++;
             }
+
+            // if penalty_end is at end already, can break, should be no more penalty
             if (penaltyEndIdx == endIdx) {
                 break;
             }
 
+            // move penalty_end to the next non-blank symbol
             while (penaltyEndIdx != endIdx && extraction[penaltyEndIdx] == 0) {
                 penaltyEndIdx++;
             }
+            
+            // if penalty_end is at end already, can break, should be no more penalty
             if (penaltyEndIdx == endIdx) {
                 break;
             }
 
+            // can assume penalty_end is at enemy piece now, move penalty start to a non - our piece
             while (extraction[penaltyStartIdx] == ourPiece) {
                 penaltyStartIdx++;
             }
 
+            // can assume that penalty_end is actually bigger than penalty_start now, get diff
+            // if diff is more than winning  piece count, incur 1 point penalty
             int diff = penaltyEndIdx - penaltyStartIdx;
             if (diff > 4) {
                 res++;
@@ -175,13 +175,17 @@ public class StaticEvaluation {
             int power = 3;
             int cumCount = 1;
 
+            // keep going until start hits our piece
             if (extraction[start] != ourPiece) {
                 continue;
             }
+
+            // we hit our piece, check for left edge and left enemy
             if (start == 0 || extraction[start - 1] != 0) {
                 power--;
             }
 
+            // move start until the end of combo, counting our pieces
             while (start < extraction.length) {
                 start++;
                 if (start == extraction.length || extraction[start] != ourPiece) {
@@ -198,12 +202,15 @@ public class StaticEvaluation {
                 cumCount++;
             }
 
+            // check if we end the combo at an edge / enemy
             if (start == extraction.length || extraction[start] != 0) {
                 power--;
             }
 
             res += Math.pow(cumCount, power);
         }
+
+        // bonus multiplier if we are moving next
         if (movesNext == ourPiece) {
             return res * res;
         }
@@ -226,8 +233,10 @@ public class StaticEvaluation {
             int boardSize,
             GameOuterClass.GameState gameState,
             byte ourPiece,
+            int ourCaptures,
             byte enemyPiece,
-            int movesNext
+            int movesNext,
+            List<Integer> is_win_check
     ) {
         int dimension = boardSize * boardSize;
         byte[] board = gameState.getBoard().toByteArray();
@@ -242,6 +251,33 @@ public class StaticEvaluation {
 
         for (List<List<Integer>> directionIndices : allIndicesDirections) {
             List<List<Byte>> directionCells = extractDimensionalCells(board, directionIndices);
+
+            // check if we win, if yes, return early and write to is_win_check
+            GomokuUtils utils = new GomokuUtils(boardSize);
+
+            if (ourCaptures >= 5) {
+                is_win_check.set(0, 1);
+                return 0;
+            }
+
+            for (int i = 0; i < directionCells.size(); i++) {
+                List<Byte> extraction = directionCells.get(i);
+                int cumCount = 0;
+                for (int cell : extraction) {
+                    if (cell == ourPiece) {
+                        cumCount++;
+                    } else {
+                        cumCount = 0;
+                    }
+
+                    if (cumCount >= 5) {
+                        if (checkWinCombNoCap(board, directionIndices.get(i), utils)) {
+                            is_win_check.set(0, 1);
+                            return 0;
+                        }
+                    }
+                }
+            }
 
             int totalScore = 0;
             for (List<Byte> extraction : directionCells) {
@@ -262,12 +298,13 @@ public class StaticEvaluation {
                     while (endIdx < extraction.size() && extraction.get(endIdx) != enemyPiece) {
                         endIdx++;
                     }
-
-                    // Extract section
-                    List<Byte> section = extraction.subList(startIdx, endIdx);
-
+                    			
                     // Count number of our pieces in the section and append score
-                    int numPiecesSection = (int) section.stream().filter(piece -> piece == ourPiece).count();
+                    int numPiecesSection = 0;
+                    for (int i = startIdx; i < endIdx; i++) {
+                        if (extraction.get(i) == ourPiece)
+                            ++numPiecesSection;
+                    }
                     extractionScore += numPiecesSection;
 
                     // Penalize big gaps in our combos (low sensitivity)
@@ -321,7 +358,6 @@ public class StaticEvaluation {
 
         return true;
     }
-
 
     public static boolean checkWinCondition(
             int boardSize,
@@ -447,20 +483,25 @@ public class StaticEvaluation {
         int movesNext = (gameState.getNumTurns() % 2 == 0) ? 1 : 2;
         long startTime = System.nanoTime();  // Start timing
 
+        List<Integer> is_win_check_p1 = new ArrayList<>(1);
+        is_win_check_p1.add(0);
 
-        int myScore = staticEvalDirectional(boardSize, gameState, (byte)ourPiece, (byte)enemyPiece, movesNext);
+        List<Integer> is_win_check_p2 = new ArrayList<>(1);
+        is_win_check_p2.add(0);
+
+        int myScore = staticEvalDirectional(boardSize, gameState, (byte)ourPiece, (int) gameState.getP1Captures(), (byte)enemyPiece, movesNext, is_win_check_p1);
         int finalScore = myScore + (int) Math.pow(gameState.getNumTurns(), ourCaptures);
 
-        int enemyScore = staticEvalDirectional(boardSize, gameState, (byte)enemyPiece, (byte)ourPiece, movesNext);
+        int enemyScore = staticEvalDirectional(boardSize, gameState, (byte)enemyPiece, (int) gameState.getP2Captures(), (byte)ourPiece, movesNext, is_win_check_p2);
         finalScore -= enemyScore;
         finalScore -= (int) Math.pow(gameState.getNumTurns(), enemyCaptures);
 
-        // Kill shot
-        if (checkWinCondition(boardSize, gameState, 1, (int) gameState.getP1Captures())) {
+        // Kill shot - assuming that there can be no 2 simultaneous winners
+        if (is_win_check_p1.get(0) == 1) {
             finalScore = (ourPiece == 1) ? Integer.MAX_VALUE : Integer.MIN_VALUE;
         }
 
-        if (checkWinCondition(boardSize, gameState, 2, (int) gameState.getP2Captures())) {
+        if (is_win_check_p2.get(0) == 1) {
             finalScore = (ourPiece == 2) ? Integer.MAX_VALUE : Integer.MIN_VALUE;
         }
 
