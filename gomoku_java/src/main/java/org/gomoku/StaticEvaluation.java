@@ -489,20 +489,20 @@ public class StaticEvaluation {
         List<Integer> is_win_check_enemy = new ArrayList<>(1);
         is_win_check_enemy.add(0);
 
-        int myScore = staticEvalDirectional(boardSize, gameState, (byte)ourPiece, (int) gameState.getP1Captures(), (byte)enemyPiece, movesNext, is_win_check_ours);
+        int myScore = staticEvalDirectional(boardSize, gameState, (byte)ourPiece, ourCaptures, (byte)enemyPiece, movesNext, is_win_check_ours);
         int finalScore = myScore + (int) Math.pow(gameState.getNumTurns(), ourCaptures);
 
-        int enemyScore = staticEvalDirectional(boardSize, gameState, (byte)enemyPiece, (int) gameState.getP2Captures(), (byte)ourPiece, movesNext, is_win_check_enemy);
+        int enemyScore = staticEvalDirectional(boardSize, gameState, (byte)enemyPiece, enemyCaptures, (byte)ourPiece, movesNext, is_win_check_enemy);
         finalScore -= enemyScore;
         finalScore -= (int) Math.pow(gameState.getNumTurns(), enemyCaptures);
 
         // Kill shot - assuming that there can be no 2 simultaneous winners
         if (is_win_check_ours.get(0) == 1) {
-            finalScore = Integer.MAX_VALUE;
+            finalScore = Integer.MAX_VALUE; // not using actual value since we want to do range compare @ minimax
         }
 
         if (is_win_check_enemy.get(0) == 1) {
-            finalScore = Integer.MIN_VALUE;
+            finalScore = Integer.MIN_VALUE; // not using actual value since we want to do range compare @ minimax
         }
 
         long endTime = System.nanoTime();    // End timing

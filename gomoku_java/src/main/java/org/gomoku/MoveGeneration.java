@@ -61,6 +61,26 @@ public class MoveGeneration {
         return false;
     }
 
+    // Checks if enemy capture is blocked by placing curr_piece at idx
+    public static boolean checkCaptureBlockDir(Function<Integer, Integer> directionFn, int idx, int boardSize, int currPiece, byte[] board) {
+        byte piece = (byte) currPiece;
+        int checkCellIdx = directionFn.apply(idx);
+        byte checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
+
+        if (checkCell > 0 && checkCell == piece) {
+            checkCellIdx = directionFn.apply(checkCellIdx);
+            checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
+
+            if (checkCell > 0 && checkCell == piece) {
+                checkCellIdx = directionFn.apply(checkCellIdx);
+                checkCell = checkCellIdx > 0 ? board[checkCellIdx] : -1;
+
+                return checkCell != piece && checkCell != 0;
+            }
+        }
+        return false;
+    }
+
     // Group local expansions
     public static List<List<Integer>> groupLocalExpansions(List<List<Integer>> localExpansions) {
         List<List<Integer>> res = new ArrayList<>();
@@ -225,13 +245,11 @@ public class MoveGeneration {
                 gomokuUtils::getBtmRightIdx
         );
 
-        // Check for captures in all 8 directions
-        // TODO check if we block a capture 
+        // Check for captures or capture blocks in all 8 directions
         for (Function<Integer, Integer> fnMapping : fnMappings) {
-            if (checkCaptureMadeDir(fnMapping, inputIdx, BOARD_SIZE, piece, board))
+            if (checkCaptureMadeDir(fnMapping, inputIdx, BOARD_SIZE, piece, board) || checkCaptureBlockDir(fnMapping, inputIdx, BOARD_SIZE, piece, board))
                 return true;
         }
-
 
         for (List<Integer> localExpansion : localExpansionGrouping) {
             List<Byte> cellValues = new ArrayList<>();

@@ -6,7 +6,7 @@ import io.grpc.ServerBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.function.Function;
 
 import com.google.protobuf.ByteString;
 
@@ -59,9 +59,9 @@ public class Main {
         byte[] board = {
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
-            0,  0,  0,  1,  0,  0,  0,  0,  0, 
-            0,  0,  0,  1,  0,  1,  2,  2,  0, 
-            0,  0,  0,  1,  0,  0,  0,  0,  0, 
+            0,  0,  0,  2,  0,  0,  0,  0,  0, 
+            0,  0,  0,  2,  0,  2,  1,  1,  0, 
+            0,  0,  0,  2,  0,  0,  0,  0,  0, 
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
@@ -103,5 +103,8 @@ public class Main {
         //     System.out.println("");
         // }
         gomokuUtils.prettyPrintBoard(Minimax.basicMinimax(game_state, BOARD_SIZE, 2, 2).getBoard().toByteArray());
+
+        // Function<Integer, Integer> fn = gomokuUtils::getLeftIdx;
+        // System.out.println(moveGeneration.checkCaptureBlockDir(fn, 35, BOARD_SIZE, 2, board));
     }
 }

@@ -22,6 +22,11 @@ public class Minimax {
         int ourCaptures = (int) ((maxPiece == 1) ? currState.getP1Captures() : currState.getP2Captures());
         int enemyCaptures = (int) ((maxPiece == 1) ? currState.getP2Captures() : currState.getP1Captures());
 
+        // System.out.println(" ".repeat(currDepth * 2) + "CALLED, is max: " + isMax);
+        // GomokuUtils gomokuUtils = new GomokuUtils(BOARD_SIZE);
+        // gomokuUtils.prettyPrintBoardIndent(currState.getBoard().toByteArray(), currDepth);
+        // System.out.println("");
+
         // Check if the current state exists in the move tree
         int stateNodeIndex = -1;
         for (int i = 0; i < moveTree.size(); i++) {
@@ -38,14 +43,12 @@ public class Minimax {
 
         // If no valid state found, perform static evaluation
         if (stateNodeIndex == -1) {
-            // System.out.println("curr depth static " + currDepth + " ismax? " + isMax);
-            return StaticEvaluation.staticEval(BOARD_SIZE, currState, ourPiece, enemyPiece, ourCaptures, enemyCaptures);
+            int res = StaticEvaluation.staticEval(BOARD_SIZE, currState, ourPiece, enemyPiece, ourCaptures, enemyCaptures);
+            // System.out.println("curr depth static " + currDepth + " ismax? " + isMax + " return " + res + " our piece " + ourPiece + " ourCap " + ourCaptures + " enemy peice " + enemyPiece + " enemycap " + enemyCaptures);
+            // gomokuUtils.prettyPrintBoardIndent(currState.getBoard().toByteArray(), currDepth);
+            // System.out.println("");
+            return res;
         }
-
-        // System.out.println(" ".repeat(currDepth * 2) + "CALLED, is max: " + isMax);
-        // GomokuUtils gomokuUtils = new GomokuUtils(BOARD_SIZE);
-        // gomokuUtils.prettyPrintBoardIndent(currState.getBoard().toByteArray(), currDepth);
-        // System.out.println("");
 
         // Initialize idealScore based on whether we're maximizing or minimizing
         GomokuUtils.GameStateNode moveTreeNode = moveTree.get(stateNodeIndex);
@@ -113,7 +116,9 @@ public class Minimax {
         for (int i = 0; i < rootChildren.size(); i++) {
             GameOuterClass.GameState child = rootChildren.get(i);
             int childScore = minimaxEval(moveTree, child, boardSize, currPiece != maxPiece, maxPiece, 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
+            // System.out.println("childscire " + childScore + " rc size " + rootChildren.size());
             if (childScore >= maxScore) {
+                // System.out.println("sel childscire " + childScore + " rc size " + rootChildren.size());
                 maxScore = childScore;
                 maxScoreIdx = i;
             }
