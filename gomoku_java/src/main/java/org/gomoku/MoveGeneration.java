@@ -212,6 +212,26 @@ public class MoveGeneration {
         
         List<List<Byte>> cellValueBuffers = new ArrayList<>();
         List<Integer> groupIndices = new ArrayList<>();
+        
+        // check if placing a piece here will capture opponent or block opponent capture
+        List<Function<Integer, Integer>> fnMappings = List.of(
+                gomokuUtils::getBtmIdx,
+                gomokuUtils::getTopIdx,
+                gomokuUtils::getLeftIdx,
+                gomokuUtils::getRightIdx,
+                gomokuUtils::getBtmLeftIdx,
+                gomokuUtils::getTopRightIdx,
+                gomokuUtils::getTopLeftIdx,
+                gomokuUtils::getBtmRightIdx
+        );
+
+        // Check for captures in all 8 directions
+        // TODO check if we block a capture 
+        for (Function<Integer, Integer> fnMapping : fnMappings) {
+            if (checkCaptureMadeDir(fnMapping, inputIdx, BOARD_SIZE, piece, board))
+                return true;
+        }
+
 
         for (List<Integer> localExpansion : localExpansionGrouping) {
             List<Byte> cellValues = new ArrayList<>();
@@ -590,7 +610,6 @@ public class MoveGeneration {
                 }
             }
         }
-
         return result;
     }
 }

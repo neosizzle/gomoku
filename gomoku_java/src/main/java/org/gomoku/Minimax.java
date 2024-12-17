@@ -38,21 +38,28 @@ public class Minimax {
 
         // If no valid state found, perform static evaluation
         if (stateNodeIndex == -1) {
+            // System.out.println("curr depth static " + currDepth + " ismax? " + isMax);
             return StaticEvaluation.staticEval(BOARD_SIZE, currState, ourPiece, enemyPiece, ourCaptures, enemyCaptures);
         }
+
+        // System.out.println(" ".repeat(currDepth * 2) + "CALLED, is max: " + isMax);
+        // GomokuUtils gomokuUtils = new GomokuUtils(BOARD_SIZE);
+        // gomokuUtils.prettyPrintBoardIndent(currState.getBoard().toByteArray(), currDepth);
+        // System.out.println("");
 
         // Initialize idealScore based on whether we're maximizing or minimizing
         GomokuUtils.GameStateNode moveTreeNode = moveTree.get(stateNodeIndex);
         List<GameOuterClass.GameState> moveTreeChildren = moveTreeNode.children();
 
         int idealScore;
-        GameOuterClass.GameState selectedState;
+        GameOuterClass.GameState selectedState = null;
 
         if (isMax) {
             idealScore = Integer.MIN_VALUE;
             for (GameOuterClass.GameState childState : moveTreeChildren) {
                 int childScore = minimaxEval(moveTree, childState, BOARD_SIZE, false, maxPiece, currDepth + 1, alpha, beta);
                 if (childScore > idealScore) {
+                    // System.out.println(" ".repeat(currDepth * 2) + "SELECTED, score: " + childScore);
                     selectedState = childState;
                 }
                 idealScore = Math.max(idealScore, childScore);
@@ -66,6 +73,7 @@ public class Minimax {
             for (GameOuterClass.GameState childState : moveTreeChildren) {
                 int childScore = minimaxEval(moveTree, childState, BOARD_SIZE, true, maxPiece, currDepth + 1, alpha, beta);
                 if (childScore < idealScore) {
+                    // System.out.println(" ".repeat(currDepth * 2) + "SELECTED, score: " + childScore);
                     selectedState = childState;
                 }
                 idealScore = Math.min(idealScore, childScore);
@@ -75,6 +83,14 @@ public class Minimax {
                 }
             }
         }
+
+        // System.out.println(" ".repeat(currDepth * 2) + "returning ideal score: " + idealScore);
+        // if (selectedState != null)
+        //     gomokuUtils.prettyPrintBoardIndent(selectedState.getBoard().toByteArray(), currDepth);
+        // else {
+        //     System.out.println(" ".repeat(currDepth * 2) + "null");
+        // }
+
         return idealScore;
     }
 
@@ -97,7 +113,7 @@ public class Minimax {
         for (int i = 0; i < rootChildren.size(); i++) {
             GameOuterClass.GameState child = rootChildren.get(i);
             int childScore = minimaxEval(moveTree, child, boardSize, currPiece != maxPiece, maxPiece, 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
-            if (childScore > maxScore) {
+            if (childScore >= maxScore) {
                 maxScore = childScore;
                 maxScoreIdx = i;
             }

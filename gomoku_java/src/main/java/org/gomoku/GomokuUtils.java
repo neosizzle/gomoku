@@ -84,7 +84,6 @@ public class GomokuUtils {
             }
         }
     }
-
     public void prettyPrintBoardIndent(byte[] buffer, int indentCount) {
         int counter = 0;
         String indent = " ".repeat(indentCount * 2);  // Calculate the indent
