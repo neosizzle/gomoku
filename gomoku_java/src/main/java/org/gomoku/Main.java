@@ -59,9 +59,9 @@ public class Main {
         byte[] board = {
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
-            0,  0,  0,  2,  0,  0,  0,  0,  0, 
-            0,  0,  0,  2,  0,  2,  1,  1,  0, 
-            0,  0,  0,  2,  0,  0,  0,  0,  0, 
+            0,  0,  0,  1,  0,  0,  0,  0,  0, 
+            0,  0,  0,  1,  0,  1,  2,  2,  0, 
+            0,  0,  0,  1,  0,  0,  0,  0,  0, 
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
@@ -84,7 +84,7 @@ public class Main {
         // int res = staticEvaluation.staticEval(BOARD_SIZE, game_state, 2, 1, (int) game_state.getP2Captures(), (int) game_state.getP1Captures());
         // boolean res = staticEvaluation.checkWinCondition(BOARD_SIZE, game_state, 1, (int) game_state.getP1Captures());
 
-        // List<GameOuterClass.GameState> res = moveGeneration.generatePossibleMoves(game_state, BOARD_SIZE, (byte) 2, true);
+        List<GameOuterClass.GameState> res = moveGeneration.generatePossibleMoves(game_state, BOARD_SIZE, (byte) 2, true);
         // List<GomokuUtils.GameStateNode> res = moveGeneration.generateMoveTree(game_state, BOARD_SIZE, (byte) 2, 3);
         
         // boolean res = moveGeneration.detectDoubleFreeThrees(50, BOARD_SIZE, (byte) 2, board);
@@ -97,12 +97,12 @@ public class Main {
         // }
         // boolean res = moveGeneration.hasFreeThree(byteList, (byte) 2, 5);
 
-        // System.out.println(res);
+        System.out.println(res);
         // for (GameOuterClass.GameState state : res) {
         //     gomokuUtils.prettyPrintBoard(state.getBoard().toByteArray());
         //     System.out.println("");
         // }
-        gomokuUtils.prettyPrintBoard(Minimax.basicMinimax(game_state, BOARD_SIZE, 2, 2).getBoard().toByteArray());
+        // gomokuUtils.prettyPrintBoard(Minimax.basicMinimax(game_state, BOARD_SIZE, 2, 2).getBoard().toByteArray());
 
         // Function<Integer, Integer> fn = gomokuUtils::getLeftIdx;
         // System.out.println(moveGeneration.checkCaptureBlockDir(fn, 35, BOARD_SIZE, 2, board));

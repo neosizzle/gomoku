@@ -139,12 +139,4 @@ public class Minimax {
 
         return res;
     }
-
-    // You can use this as a helper to time your minimax method
-    public static void measureDuration(Runnable task) {
-        long startTime = System.nanoTime();
-        task.run();
-        long endTime = System.nanoTime();
-        System.out.println("Execution time: " + (endTime - startTime) + " ns");
-    }
 }

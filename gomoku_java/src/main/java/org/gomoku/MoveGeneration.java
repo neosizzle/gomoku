@@ -17,8 +17,9 @@ public class MoveGeneration {
         gomokuUtils = new GomokuUtils(boardSize);
     }
     public List<List<Integer>> expandAllDirections(int idx, int depth) {
-        List<List<Integer>> res = new ArrayList<>();
-        List<Function<Integer, Integer>> dirFns = List.of(gomokuUtils::getTopIdx,
+        List<List<Integer>> res = new ArrayList<>(8);
+        List<Function<Integer, Integer>> dirFns = List.of(
+                gomokuUtils::getTopIdx,
                 gomokuUtils::getBtmIdx,
                 gomokuUtils::getLeftIdx,
                 gomokuUtils::getRightIdx,
@@ -29,7 +30,7 @@ public class MoveGeneration {
 
         for (Function<Integer, Integer> dir : dirFns) {
             int lastDirRes = idx;
-            List<Integer> curr = new ArrayList<>();
+            List<Integer> curr = new ArrayList<>(depth);
             for (int i = 0; i < depth; i++) {
                 int newDirRes = dir.apply(lastDirRes);
                 if (newDirRes == -1) break;
@@ -419,7 +420,7 @@ public class MoveGeneration {
         }
 
         // Validate if placing such a piece will capture an opponent
-        List<Boolean> capturedValidationRes = new ArrayList<>();
+        List<Boolean> capturedValidationRes = new ArrayList<>(8);
         List<Function<Integer, Integer>> fnMappings = List.of(
                 gomokuUtils::getBtmIdx,
                 gomokuUtils::getTopIdx,
@@ -516,9 +517,9 @@ public class MoveGeneration {
     public List<GameOuterClass.GameState> generatePossibleMoves(GameOuterClass.GameState state, int boardSize, byte piece, boolean filterEndMoves) {
         byte[] currBoard = state.getBoard().toByteArray(); // Assuming `getBoard()` returns a 1D array representation
         int dims = boardSize * boardSize;
-        List<GameOuterClass.GameState> result = new ArrayList<>();
-        Set<Integer> initialSearchIndices = new LinkedHashSet<>();
-        Set<Integer> threatSearchIndices = new LinkedHashSet<>();
+        List<GameOuterClass.GameState> result = new ArrayList<>(64);
+        Set<Integer> initialSearchIndices = new LinkedHashSet<>(64);
+        Set<Integer> threatSearchIndices = new LinkedHashSet<>(32);
 
         // Check if the game is already in an end state
         if (state.getIsEnd() != 0) {
@@ -562,7 +563,7 @@ public class MoveGeneration {
 
         // Filter for winning moves if required
         if (filterEndMoves) {
-            List<GameOuterClass.GameState> winningMoves = new ArrayList<>();
+            List<GameOuterClass.GameState> winningMoves = new ArrayList<>(16);
             for (GameOuterClass.GameState move : result) {
                 if (move.getIsEnd() == piece) {
                     winningMoves.add(move);
@@ -572,7 +573,6 @@ public class MoveGeneration {
                 return winningMoves;
             }
         }
-        
         return result;
     }
 
