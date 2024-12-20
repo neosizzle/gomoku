@@ -3,10 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>Gomoku Game</title>
-    <style>  
+    <style>
+
+        body {
+            background: antiquewhite;
+        }
+
         table {
             border-collapse: collapse;
             margin: 20px auto;
+            background-image: url('{{ url_for("static", filename="board.svg") }}');
+             border-radius: 3px;
         }
 
         td {
@@ -42,29 +49,42 @@
             transform: translateX(-50%);
         }
 
+            td:first-child::before {
+            width: 50%;
+            left: 50%;
+        }
+
+        td:last-child::before {
+            width: 50%;
+        }
+
+        tr:first-child td::after {
+            height: 50%;
+            top: 50%;
+        }
+
+        tr:last-child td::after {
+            height: 50%;
+        }
+
         .black-dot {
-            font-size: 36px;
-            color: black;
+            font-size: 24px;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none; /* Prevent interaction */
+            z-index: 1;
         }
 
         .white-dot {
-            font-size: 36px;
-            color: white;
+            font-size: 24px;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none; /* Prevent interaction */
-            text-shadow: 
-                -1px -1px 0 black,
-                1px -1px 0 black,
-                -1px 1px 0 black,
-                1px 1px 0 black;
+            z-index: 1;
         }
 
         .grey-dot {
@@ -109,25 +129,40 @@
             max-height: 120px;
             overflow: auto;
         }
+
+             #scoreboard {
+        background-image: url('{{ url_for("static", filename="chalkboard.svg") }}');
+        background-size: cover; /* Ensures the image covers the div */
+        background-position: center;
+        display: flex;
+        float: left;
+        flex-direction: column; /* Align children vertically */
+        padding: 40px;
+        justify-content: center;
+        font-size: 21px;
+        gap: 40px;
+    }
     </style>
 </head>
 <body>
     <h1>Gomoku Game {{mode}} {{variant}} </h1>
 
+    <div id="scoreboard">
     <div>
-        (Black) Player 1 captures <span id="p1_captures">0</span>
+        <span>⚫</span> Player 1 captures <span id="p1_captures">0</span>
     </div>
 
     <div>
-        (White) Player 2 captures <span id="p2_captures">0</span>
+        <span>⚪</span> Player 2 captures <span id="p2_captures">0</span>
     </div>
 
     <div>
         Turn <span id="num_turns">0</span>
     </div>
+        </div>
     
-    {% if mode == "pvp" %}
     <div id="game-container">
+    {% if mode == "pvp" %}
         <div>
             <table id="board">
                 {% for y in range(board_size) %}
@@ -137,10 +172,10 @@
                         {% if board[y][x] == 0 %}
                             &nbsp; 
                         {% elif board[y][x] == 1 %}
-                            <span class="black-dot">&#9679;</span>
+                            <span class="black-dot">⚫</span>
         
                         {% elif board[y][x] == 2 %}
-                            <span class="white-dot">&#9675;</span>
+                            <span class="white-dot">⚪</span>
                         {% endif %}
                     </td>
                     {% endfor %}
@@ -197,10 +232,10 @@
                 {% if board[y][x] == 0 %}
                     &nbsp; 
                 {% elif board[y][x] == 1 %}
-                    <span class="black-dot">&#9679;</span>
+                    <span class="black-dot">⚫</span>
 
                 {% elif board[y][x] == 2 %}
-                    <span class="white-dot">&#9675;</span>
+                    <span class="white-dot">⚪</span>
                 {% endif %}
             </td>
             {% endfor %}
@@ -374,9 +409,9 @@
             if (value == 0) {
                 cell.innerHTML = '&nbsp;';
             } else if (value == 1) {
-                cell.innerHTML = '<span class="black-dot">&#9679;</span>';
+                cell.innerHTML = '<span class="black-dot">⚫</span>';
             } else if (value == 2) {
-                cell.innerHTML = '<span class="white-dot">&#9675;</span>';
+                cell.innerHTML = '<span class="white-dot">⚪</span>';
             }
         }
 

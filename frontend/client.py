@@ -8,7 +8,7 @@ import move_generation
 
 class GomokuClient:
 	def __init__(self):
-		self.app = Flask('game_app', template_folder='./frontend/templates')
+		self.app = Flask('game_app', template_folder='./frontend/templates', static_folder='./frontend/static')
 		self.channel = grpc.insecure_channel('localhost:50051')
 		self.stub = game_pb2_grpc.GameStub(self.channel)
 		self.board_size = 19
