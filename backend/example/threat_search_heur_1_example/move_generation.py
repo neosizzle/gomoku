@@ -333,18 +333,22 @@ def detect_threat_formation(buffer, piece, idx_to_place):
 	end_idx = idx_to_place + 1
 	gap = False
 
+	# print(f'begin start {start_idx}, begin end {end_idx}')
+
 	# initial start and end idx is gap
 	if start_idx > 0:
 		if buffer[start_idx] == 0 and not gap:
-			if start_idx > 2 and buffer[start_idx - 2] == piece:
+			if start_idx > 2 and buffer[start_idx - 1] == piece:
 				gap = True
 				start_idx -= 1
 
 	if end_idx < len(buffer):
 		if buffer[end_idx] == 0 and not gap:
-			if end_idx < len(buffer) - 2 and buffer[end_idx + 2] == piece:
+			if end_idx < len(buffer) - 2 and buffer[end_idx + 1] == piece:
 				gap = True
 				end_idx += 1
+
+	# print(f'gap start {start_idx}, gap end {end_idx}')
 
 	# move start idx to the start of the threat sequence, gap sensitive
 	while start_idx >= 0 and buffer[start_idx] == piece:
@@ -364,6 +368,7 @@ def detect_threat_formation(buffer, piece, idx_to_place):
 				end_idx += 1
 		end_idx += 1
 
+	# print(f'init start {start_idx}, init end {end_idx}')
 	start_closed = False
 	end_closed = False
 
@@ -377,6 +382,8 @@ def detect_threat_formation(buffer, piece, idx_to_place):
 
 	# evaluate real threat size
 	real_threat_size = end_idx - start_idx - 1
+	if gap:
+		real_threat_size -= 1
 	# print(f"real threat size {real_threat_size}, start_idx {start_idx}, end_idx {end_idx}")
 	# calculate potential threat
 	if not start_closed:
@@ -565,6 +572,7 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 		# get all indices from all directions within a 2 depth range
 		directional_indices = sum(expand_all_directions(i, 2, BOARD_SIZE), []) # combine list results
 		for val in directional_indices:
+			# print(f"checking {val}")
 			# ignore cells which are occupied
 			if curr_board[val] != 0:
 				continue
@@ -584,10 +592,10 @@ def generate_possible_moves(state: game_pb2.GameState, BOARD_SIZE: int, piece: i
 
 	# iterate through all cells in dimensions
 	for i in indices_to_check:
-
 		# attempt to place piece in empty space. If such a piece is not valid
 		# do not add the move into the result array
 		game_state = place_piece_attempt(i, piece, state, BOARD_SIZE, ignore_self_captured=True)
+		
 		if game_state is not None:
 			res.append(game_state)
 
@@ -620,13 +628,14 @@ def generate_move_tree(state: game_pb2.GameState, BOARD_SIZE: int, piece: int, d
 			# iterate the adjacency list to find leaves
 			for j in range(len(res)):
 				if res[j][1] == None:
+					# print(f"gen moves {res[j][0]}")
 					# generate children of leaf
 					leaf_children = generate_possible_moves(res[j][0], BOARD_SIZE, curr_piece, filter_endmoves=True)
 					res[j][1] = leaf_children
 					new_leaves.append(leaf_children)
-
 			# update adjacency list to include all new leaves
 			for leaf in new_leaves:
+				# print(f"root children {len(leaf)}")
 				for state in leaf:
 					res.append([state, None])
 	return res
@@ -663,45 +672,48 @@ def main():
 
 	board = bytes([
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0,
-		1, 0, 0, 0, 2, 0, 0, 0, 0,
-		2, 0, 1, 0, 0, 0, 0, 0, 0,
-		2, 0, 0, 0, 0, 0, 0, 0, 0,
-		2, 0, 0, 0, 0, 0, 0, 0, 0,
-		1, 0, 0, 0, 0, 1, 0, 0, 0,
-		2, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0
+    	0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 0, 0, 1, 0, 0, 1, 0, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 0, 0, 0, 2, 0, 0, 0, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0,
+    	0, 0, 0, 0, 0, 0, 0, 0, 0
 	])
 
 	# p1 is 1, p2 is 2
 	game_state = game_pb2.GameState(
 		board=board,
-		p1_captures=4,
-		p2_captures=4,
-		num_turns=0,
-		is_end=0,
+		p1_captures=0,
+		p2_captures=1,
+		num_turns=7,
+		is_end=False,
 		time_to_think_ns=0
 	)
 
-	# print(detect_threat_formation([0,0,2,0,2,0], 2, 3)) # true
-	# print(detect_threat_formation([0,2,2,0,0,0], 2, 3)) # true
-	# print(detect_threat_formation([2,2,0,0,0,0], 2, 2)) # true
-	# print(detect_threat_formation([0,2,2,0,0,0], 2, 0)) # true
-	# print(detect_threat_formation([2,0,2,0,0,0], 2, 1)) # true
-	# print(detect_threat_formation([0,0,0,0,2,2], 2, 3)) # true
-	# print(detect_threat_formation([0,0,0,2,2,0], 2, 5)) # true
-	# print(detect_threat_formation([0,0,0,2,2,1], 2, 2)) # true
-	# print(detect_threat_formation([0,0,2,2,2,0], 2, 0)) # true
-	# print(detect_threat_formation([1,0,2,2,0,0], 2, 1)) # true
-	# print(detect_threat_formation([0,0,2,2,0,1], 2, 0)) # true
-	# print("")
-	# print(detect_threat_formation([0,0,1,2,2,0], 2, 5)) # false
-	# print(detect_threat_formation([0,0,2,2,1,0], 2, 1)) # false
-	# print(detect_threat_formation([1,0,2,2,0,1], 2, 1)) # false
-	# print(detect_threat_formation([0,2,0,0,0,1], 2, 0)) # false
-	# print(detect_threat_formation([0,0,0,2,0,1], 2, 0)) # false
-	# print(detect_threat_formation([0,0,0,0,0,0], 2, 2)) # false
-	# print(detect_threat_formation([0,0,0,2,0,0], 2, 2)) # false
+	print(detect_threat_formation([0,0,2,0,2,0], 2, 3)) # true
+	print(detect_threat_formation([0,2,2,0,0,0], 2, 3)) # true
+	print(detect_threat_formation([2,2,0,0,0,0], 2, 2)) # true
+	print(detect_threat_formation([0,2,2,0,0,0], 2, 0)) # true
+	print(detect_threat_formation([2,0,2,0,0,0], 2, 1)) # true
+	print(detect_threat_formation([0,0,0,0,2,2], 2, 3)) # true
+	print(detect_threat_formation([0,0,0,2,2,0], 2, 5)) # true
+	print(detect_threat_formation([0,0,0,2,2,1], 2, 2)) # true
+	print(detect_threat_formation([0,0,2,2,2,0], 2, 0)) # true
+	print(detect_threat_formation([1,0,2,2,0,0], 2, 1)) # true
+	print(detect_threat_formation([0,0,2,2,0,1], 2, 0)) # true
+	print("")
+	print(detect_threat_formation([0,0,1,2,2,0], 2, 5)) # false
+	print(detect_threat_formation([0,0,2,2,1,0], 2, 1)) # false
+	print(detect_threat_formation([1,0,2,2,0,1], 2, 1)) # false
+	print(detect_threat_formation([0,2,0,0,0,1], 2, 0)) # false
+	print(detect_threat_formation([0,0,0,2,0,1], 2, 0)) # false
+	print(detect_threat_formation([0,0,0,0,0,0], 2, 2)) # false
+	print(detect_threat_formation([0,0,0,2,0,0], 2, 2)) # false
+	print(detect_threat_formation([0,2,0,0,0,2,0], 2, 4)) # false
+	print(detect_threat_formation([0,0,2,0,0,0,0], 2, 0)) # false
+
 
 
 	# print(detect_threat_block([0,0,2,0,2,0], 1, 3)) # true
@@ -726,7 +738,7 @@ def main():
 	# 	if board[i] == 0:
 	# 		print(f"{has_threat(i, BOARD_SIZE, 1, board)} at {i}")
 
-	# print(has_free_three([0, 0, 0, 0, 0, 2, 2, 0, 0], 2, 7))
+	# print(has_free_three([0, 0, 0, 1, 0, 0, 2, 0, 0], 2, 5))
 	# new_state = place_piece_attempt(19, 2, game_state, BOARD_SIZE)
 	# if new_state is None:
 	# 	print("new state is none")
@@ -734,17 +746,17 @@ def main():
 	# 	pretty_print_board(new_state.board, BOARD_SIZE)
 	# 	print(f"{new_state}")
 
-	move_tree = generate_move_tree(game_state, BOARD_SIZE, 1, 3)
-	print(f"{len(move_tree)}")
+	# move_tree = generate_move_tree(game_state, BOARD_SIZE, 2, 3)
+	# print(f"{len(move_tree)}")
 	
 	# for node in move_tree:
 	# 	pretty_print_board(node[0].board, BOARD_SIZE)
 	# 	print("")
 
-	# possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 1, filter_endmoves=True)
+	# possible_moves = generate_possible_moves(game_state, BOARD_SIZE, 2, filter_endmoves=True)
 	# print(f"{len(possible_moves)}")
 	# for state in possible_moves:
 	# 	pretty_print_board(state.board, BOARD_SIZE)
-		# print("")
+	# 	print("")
 
 # main()

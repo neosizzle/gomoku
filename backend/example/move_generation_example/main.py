@@ -333,18 +333,22 @@ def detect_threat_formation(buffer, piece, idx_to_place):
 	end_idx = idx_to_place + 1
 	gap = False
 
+	# print(f'begin start {start_idx}, begin end {end_idx}')
+
 	# initial start and end idx is gap
 	if start_idx > 0:
 		if buffer[start_idx] == 0 and not gap:
-			if start_idx > 2 and buffer[start_idx - 2] == piece:
+			if start_idx > 2 and buffer[start_idx - 1] == piece:
 				gap = True
 				start_idx -= 1
 
 	if end_idx < len(buffer):
 		if buffer[end_idx] == 0 and not gap:
-			if end_idx < len(buffer) - 2 and buffer[end_idx + 2] == piece:
+			if end_idx < len(buffer) - 2 and buffer[end_idx + 1] == piece:
 				gap = True
 				end_idx += 1
+
+	# print(f'gap start {start_idx}, gap end {end_idx}')
 
 	# move start idx to the start of the threat sequence, gap sensitive
 	while start_idx >= 0 and buffer[start_idx] == piece:
@@ -364,6 +368,7 @@ def detect_threat_formation(buffer, piece, idx_to_place):
 				end_idx += 1
 		end_idx += 1
 
+	# print(f'init start {start_idx}, init end {end_idx}')
 	start_closed = False
 	end_closed = False
 
@@ -377,6 +382,8 @@ def detect_threat_formation(buffer, piece, idx_to_place):
 
 	# evaluate real threat size
 	real_threat_size = end_idx - start_idx - 1
+	if gap:
+		real_threat_size -= 1
 	# print(f"real threat size {real_threat_size}, start_idx {start_idx}, end_idx {end_idx}")
 	# calculate potential threat
 	if not start_closed:
@@ -685,25 +692,29 @@ def main():
 		time_to_think_ns=0
 	)
 
-	# print(detect_threat_formation([0,0,2,0,2,0], 2, 3)) # true
-	# print(detect_threat_formation([0,2,2,0,0,0], 2, 3)) # true
-	# print(detect_threat_formation([2,2,0,0,0,0], 2, 2)) # true
-	# print(detect_threat_formation([0,2,2,0,0,0], 2, 0)) # true
-	# print(detect_threat_formation([2,0,2,0,0,0], 2, 1)) # true
-	# print(detect_threat_formation([0,0,0,0,2,2], 2, 3)) # true
-	# print(detect_threat_formation([0,0,0,2,2,0], 2, 5)) # true
-	# print(detect_threat_formation([0,0,0,2,2,1], 2, 2)) # true
-	# print(detect_threat_formation([0,0,2,2,2,0], 2, 0)) # true
-	# print(detect_threat_formation([1,0,2,2,0,0], 2, 1)) # true
-	# print(detect_threat_formation([0,0,2,2,0,1], 2, 0)) # true
-	# print("")
-	# print(detect_threat_formation([0,0,1,2,2,0], 2, 5)) # false
-	# print(detect_threat_formation([0,0,2,2,1,0], 2, 1)) # false
-	# print(detect_threat_formation([1,0,2,2,0,1], 2, 1)) # false
-	# print(detect_threat_formation([0,2,0,0,0,1], 2, 0)) # false
-	# print(detect_threat_formation([0,0,0,2,0,1], 2, 0)) # false
-	# print(detect_threat_formation([0,0,0,0,0,0], 2, 2)) # false
-	# print(detect_threat_formation([0,0,0,2,0,0], 2, 2)) # false
+	print(detect_threat_formation([0,0,2,0,2,0], 2, 3)) # true
+	print(detect_threat_formation([0,2,2,0,0,0], 2, 3)) # true
+	print(detect_threat_formation([2,2,0,0,0,0], 2, 2)) # true
+	print(detect_threat_formation([0,2,2,0,0,0], 2, 0)) # true
+	print(detect_threat_formation([2,0,2,0,0,0], 2, 1)) # true
+	print(detect_threat_formation([0,0,0,0,2,2], 2, 3)) # true
+	print(detect_threat_formation([0,0,0,2,2,0], 2, 5)) # true
+	print(detect_threat_formation([0,0,0,2,2,1], 2, 2)) # true
+	print(detect_threat_formation([0,0,2,2,2,0], 2, 0)) # true
+	print(detect_threat_formation([1,0,2,2,0,0], 2, 1)) # true
+	print(detect_threat_formation([0,0,2,2,0,1], 2, 0)) # true
+	print("")
+	print(detect_threat_formation([0,0,1,2,2,0], 2, 5)) # false
+	print(detect_threat_formation([0,0,2,2,1,0], 2, 1)) # false
+	print(detect_threat_formation([1,0,2,2,0,1], 2, 1)) # false
+	print(detect_threat_formation([0,2,0,0,0,1], 2, 0)) # false
+	print(detect_threat_formation([0,0,0,2,0,1], 2, 0)) # false
+	print(detect_threat_formation([0,0,0,0,0,0], 2, 2)) # false
+	print(detect_threat_formation([0,0,0,2,0,0], 2, 2)) # false
+	print(detect_threat_formation([0,2,0,0,0,2,0], 2, 4)) # false
+	print(detect_threat_formation([0,0,2,0,0,0,0], 2, 0)) # false
+	print(detect_threat_formation([0,0,2,0,0,1,0], 2, 3)) # false
+
 
 
 	# print(detect_threat_block([0,0,2,0,2,0], 1, 3)) # true
@@ -736,8 +747,8 @@ def main():
 	# 	pretty_print_board(new_state.board, BOARD_SIZE)
 	# 	print(f"{new_state}")
 
-	move_tree = generate_move_tree(game_state, BOARD_SIZE, 2, 3)
-	print(f"{len(move_tree)}")
+	# move_tree = generate_move_tree(game_state, BOARD_SIZE, 2, 3)
+	# print(f"{len(move_tree)}")
 	
 	# for node in move_tree:
 	# 	pretty_print_board(node[0].board, BOARD_SIZE)

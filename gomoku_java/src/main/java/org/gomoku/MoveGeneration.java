@@ -296,14 +296,14 @@ public class MoveGeneration {
 
         // Initial gap detection for startIdx and endIdx
         if (startIdx >= 0 && buffer.get(startIdx) == 0 && !gap) {
-            if (startIdx > 2 && buffer.get(startIdx - 2) == piece) {
+            if (startIdx > 2 && buffer.get(startIdx - 1) == piece) {
                 gap = true;
                 startIdx--;
             }
         }
 
         if (endIdx < buffer.size() && buffer.get(endIdx) == 0 && !gap) {
-            if (endIdx < buffer.size() - 2 && buffer.get(endIdx + 2) == piece) {
+            if (endIdx < buffer.size() - 2 && buffer.get(endIdx + 1) == piece) {
                 gap = true;
                 endIdx++;
             }
@@ -338,6 +338,8 @@ public class MoveGeneration {
 
         // Evaluate real threat size
         int realThreatSize = endIdx - startIdx - 1;
+        if (gap) --realThreatSize;
+        // System.out.println(String.format("real threat size %d, start_idx %d, end_idx %d, place_idx %d", realThreatSize, startIdx, endIdx, idxToPlace) + ": " + buffer);
 
         // Calculate potential threat size
         if (!startClosed) {
@@ -353,7 +355,6 @@ public class MoveGeneration {
                 startIdx--;
             }
         }
-
 
         if (!endClosed) {
             while (endIdx < buffer.size() && buffer.get(endIdx) == 0) {
@@ -517,9 +518,9 @@ public class MoveGeneration {
     public List<GameOuterClass.GameState> generatePossibleMoves(GameOuterClass.GameState state, int boardSize, byte piece, boolean filterEndMoves) {
         byte[] currBoard = state.getBoard().toByteArray(); // Assuming `getBoard()` returns a 1D array representation
         int dims = boardSize * boardSize;
-        List<GameOuterClass.GameState> result = new ArrayList<>(64);
-        Set<Integer> initialSearchIndices = new LinkedHashSet<>(64);
-        Set<Integer> threatSearchIndices = new LinkedHashSet<>(32);
+        List<GameOuterClass.GameState> result = new ArrayList<>(256);
+        Set<Integer> initialSearchIndices = new LinkedHashSet<>(256);
+        Set<Integer> threatSearchIndices = new LinkedHashSet<>(64);
 
         // Check if the game is already in an end state
         if (state.getIsEnd() != 0) {
@@ -535,6 +536,9 @@ public class MoveGeneration {
             // Get all indices in a 2-cell range in all directions
             List<Integer> directionalIndices = expandAllDirections(i, 2).stream().flatMap(List::stream)
             .collect(Collectors.toList());
+
+            // generate a depth 1 directional indices for the case of no threats?
+
             for (Integer val : directionalIndices) {
                 // System.out.println("checking " + val);
 
@@ -542,7 +546,13 @@ public class MoveGeneration {
                     continue;
                 }
 
-                initialSearchIndices.add(val);
+                // Since we will pick threats over initial search indices,
+                // the the case of no threats, assume that placing the next piece near enemy
+                // piece is the best move
+                if (state.getNumTurns() < 5)
+                    initialSearchIndices.add(val);
+                else if (currBoard[i] == piece)
+                    initialSearchIndices.add(val);
 
                 // Add to threat indices if placing here forms/blocks a threat
                 if (hasThreat(val, boardSize, piece, currBoard)) {
@@ -550,6 +560,7 @@ public class MoveGeneration {
                 }
             }
         }
+
 
         // Use threat indices if available; otherwise, use initial search indices
         Set<Integer> indicesToCheck = !threatSearchIndices.isEmpty() ? threatSearchIndices : initialSearchIndices;
@@ -577,7 +588,7 @@ public class MoveGeneration {
     }
 
     public List<GomokuUtils.GameStateNode> generateMoveTree(GameOuterClass.GameState state, int boardSize, byte piece, int depth) {
-        List<GomokuUtils.GameStateNode> result = new ArrayList<>();
+        List<GomokuUtils.GameStateNode> result = new ArrayList<>(128);
 
         for (int i = 0; i < depth; i++) {
             byte currPiece = (i % 2 == 0) ? piece : (byte) (piece ==  (byte) 1 ? (byte) 2 : (byte) 1);
@@ -591,7 +602,7 @@ public class MoveGeneration {
                     result.add(new GomokuUtils.GameStateNode(child, null));
                 }
             } else {
-                List<List<GameOuterClass.GameState>> newLeaves = new ArrayList<>();
+                List<List<GameOuterClass.GameState>> newLeaves = new ArrayList<>(result.size());
                 
                 // Find leaves and generate their children
 

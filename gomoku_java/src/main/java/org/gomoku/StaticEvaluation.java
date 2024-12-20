@@ -481,7 +481,7 @@ public class StaticEvaluation {
             int enemyCaptures
     ) {
         int movesNext = (gameState.getNumTurns() % 2 == 0) ? 1 : 2;
-        long startTime = System.nanoTime();  // Start timing
+        // long startTime = System.nanoTime();  // Start timing
 
         List<Integer> is_win_check_ours = new ArrayList<>(1);
         is_win_check_ours.add(0);
@@ -505,9 +505,9 @@ public class StaticEvaluation {
             finalScore = Integer.MIN_VALUE; // not using actual value since we want to do range compare @ minimax
         }
 
-        long endTime = System.nanoTime();    // End timing
-        long durationNs = endTime - startTime; // Duration in nanoseconds
-        String formattedDuration = TimeFormatter.formatTime(durationNs);
+        // long endTime = System.nanoTime();    // End timing
+        // long durationNs = endTime - startTime; // Duration in nanoseconds
+        // String formattedDuration = TimeFormatter.formatTime(durationNs);
         // System.out.println("Function staticEval took " + formattedDuration);
         return finalScore;
     }

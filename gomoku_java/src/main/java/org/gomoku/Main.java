@@ -35,7 +35,7 @@ public class Main {
     public static void main(String[] args) throws InterruptedException, IOException {
          int port = 50051;
          Server server = ServerBuilder.forPort(port)
-                 .addService(new GameService(9))
+                 .addService(new GameService(19))
                  .build();
 
          server.start();
@@ -54,25 +54,26 @@ public class Main {
 
          server.awaitTermination();
 
+        // testing area, the authors are lazy to create executable examples
         final int BOARD_SIZE = 9;
 
         byte[] board = {
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  2,  0,  0,  0, 
             0,  0,  0,  1,  0,  0,  0,  0,  0, 
-            0,  0,  0,  1,  0,  1,  2,  2,  0, 
             0,  0,  0,  1,  0,  0,  0,  0,  0, 
-            0,  0,  0,  0,  0,  0,  0,  0,  0, 
-            0,  0,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  2,  1,  0,  0,  2,  0,  0, 
+            0,  0,  0,  2,  0,  0,  0,  0,  0, 
             0,  0,  0,  0,  0,  0,  0,  0,  0, 
             0,  0,  0,  0,  0,  0,  0,  0,  0,
         };
 
         GameOuterClass.GameState game_state = GameOuterClass.GameState.newBuilder()
                 .setBoard(encodeBoard(board))
-                .setP1Captures(4)
-                .setP2Captures(4)
-                .setNumTurns(5)
+                .setP1Captures(0)
+                .setP2Captures(0)
+                .setNumTurns(9)
                 .setIsEnd(0)
                 .setTimeToThinkNs(0)
                 .build();
@@ -86,7 +87,8 @@ public class Main {
 
         List<GameOuterClass.GameState> res = moveGeneration.generatePossibleMoves(game_state, BOARD_SIZE, (byte) 2, true);
         // List<GomokuUtils.GameStateNode> res = moveGeneration.generateMoveTree(game_state, BOARD_SIZE, (byte) 2, 3);
-        
+        // boolean res = moveGeneration.hasThreat(50, BOARD_SIZE, (byte) 2, board);
+
         // boolean res = moveGeneration.detectDoubleFreeThrees(50, BOARD_SIZE, (byte) 2, board);
         // byte[] buffer = {
         //     0, 0, 0, 1, 0, 0, 2, 0, 0
@@ -97,11 +99,13 @@ public class Main {
         // }
         // boolean res = moveGeneration.hasFreeThree(byteList, (byte) 2, 5);
 
-        System.out.println(res);
-        // for (GameOuterClass.GameState state : res) {
-        //     gomokuUtils.prettyPrintBoard(state.getBoard().toByteArray());
-        //     System.out.println("");
-        // }
+        // System.out.println(res);
+        
+        System.out.println(res.size());
+        for (GameOuterClass.GameState state : res) {
+            gomokuUtils.prettyPrintBoard(state.getBoard().toByteArray());
+            System.out.println("");
+        }
         // gomokuUtils.prettyPrintBoard(Minimax.basicMinimax(game_state, BOARD_SIZE, 2, 2).getBoard().toByteArray());
 
         // Function<Integer, Integer> fn = gomokuUtils::getLeftIdx;
