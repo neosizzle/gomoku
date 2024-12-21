@@ -198,8 +198,9 @@
                 </div>
             </div>
             {% if variant == "pro" %}
+            <div><h4>P1 Timer</h4></div>
             <div id="p1-timer">
-                10
+                600
             </div>
             {% endif %}    
 
@@ -215,8 +216,9 @@
                 </div>
             </div>
             {% if variant == "pro" %}
+            <div><h4>P2 Timer</h4></div>
             <div id="p2-timer">
-                10
+                600
             </div>
             {% endif %}   
         </div>
@@ -303,12 +305,14 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.status) { 
-                            updateGameBoard(); 
+                        if (data.status != 200)
+                        {
+                            alert(data.message)
                             resolved_move = true
-                        } else {
-                            console.log("Invalid move or game over.");
+                            return;
                         }
+                        updateGameBoard(); 
+                        resolved_move = true
                     })
                     .catch(error => console.error('Error:', error));                    
                 }
@@ -330,6 +334,7 @@
                     .then(data => {
                         if (data.status != 200) {
                             alert(data.message)
+                            resolved_move = true
                             return
                         }
                         updateGameBoard();
@@ -448,7 +453,7 @@
                 const suggested_y = Math.floor(data.index / parseInt("{{board_size}}"))
                 const suggested_x = data.index % parseInt("{{board_size}}")
 
-                // alert(`suggested y ${suggested_y} suggested x ${suggested_x}`)
+                alert(`suggested y ${suggested_y} suggested x ${suggested_x}`)
                 
                 // update UI here
                 table_rows = document.getElementById("board").children[0].children
@@ -474,6 +479,7 @@
             })
             .catch(error => console.error('Error:', error));    
         }
+        // NOTE: Error in console will appear for this line if not in PVP, expected.
         document.getElementById('suggest-move').addEventListener('click', () => suggest_move())
 
         // start timer
