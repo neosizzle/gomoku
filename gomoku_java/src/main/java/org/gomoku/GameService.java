@@ -47,7 +47,9 @@ public class GameService extends GameGrpc.GameImplBase {
 
     @Override
     public void suggestNextMove(GameOuterClass.GameState request, StreamObserver<GameOuterClass.GameState> responseObserver) {
-        GameOuterClass.GameState suggestedState = Minimax.basicMinimax(request, size, 2, 2);
+        GameOuterClass.GameState suggestedState = null;
+        if (request.getNumTurns() % 2 != 0) suggestedState = Minimax.basicMinimax(request, size, 2, 2);
+        else suggestedState = Minimax.basicMinimax(request, size, 1, 1);
         responseObserver.onNext(suggestedState);
         responseObserver.onCompleted();
     }

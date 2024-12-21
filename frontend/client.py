@@ -107,6 +107,12 @@ class GomokuClient:
 		y = int(request.form['y'])
 		index = y * self.board_size + x  # Convert to 1D index
 
+		# validate for pro variant, first move must be at center
+		if self.variant == "pro" and self.game_state.num_turns == 0:
+			mid_x_y = round(self.board_size / 2)
+			if (x + 1) != mid_x_y or (y + 1) != mid_x_y:
+				return jsonify(status=400, message=f"PRO mode requires first move to be at ({mid_x_y},{mid_x_y})")
+
 		# capture checking here
 		board_copy = bytearray(self.game_state.board[:])
 		
@@ -177,7 +183,7 @@ class GomokuClient:
 	def suggest_move(self):
 		curr_piece = 1 if self.game_state.num_turns % 2 == 0 else 2
 
-		print("suggesting next move for")
+		print(f"suggesting next move for {curr_piece} turns {self.game_state.num_turns}")
 		board_copy = bytearray(self.game_state.board[:])
 		utils.pretty_print_board(board_copy, self.board_size)
 
@@ -203,6 +209,12 @@ class GomokuClient:
 		y = int(request.form['y'])
 		our_piece = int(request.form['piece'])
 		index = y * self.board_size + x  # Convert to 1D index
+
+		# validate for pro variant, first move must be at center
+		if self.variant == "pro" and self.game_state.num_turns == 0:
+			mid_x_y = round(self.board_size / 2)
+			if (x + 1) != mid_x_y or (y + 1) != mid_x_y:
+				return jsonify(status=400, message=f"PRO mode requires first move to be at ({mid_x_y},{mid_x_y})")
 
 		# capture checking here
 		board_copy = bytearray(self.game_state.board[:])

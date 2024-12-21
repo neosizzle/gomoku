@@ -106,6 +106,7 @@ public class Minimax {
         // Generate move tree (you'll need a function for move generation in Java)
         MoveGeneration moveGeneration = new MoveGeneration(boardSize);
         List<GomokuUtils.GameStateNode> moveTree = moveGeneration.generateMoveTree(state, boardSize, (byte) currPiece, depth);
+        System.out.println("move tree len " + moveTree.size());
         GameOuterClass.GameState rootNode =  moveTree.get(0).state();
         List<GameOuterClass.GameState> rootChildren =  moveTree.get(0).children();
 
