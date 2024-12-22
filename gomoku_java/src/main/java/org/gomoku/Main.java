@@ -55,18 +55,28 @@ public class Main {
          server.awaitTermination();
 
         // testing area, the authors are lazy to create executable examples
-        final int BOARD_SIZE = 9;
+        final int BOARD_SIZE = 19;
 
         byte[] board = {
-            0,  0,  0,  0,  0,  0,  0,  0,  0, 
-            0,  0,  0,  0,  0,  0,  0,  0,  0, 
-            0,  0,  0,  0,  0,  2,  0,  0,  0, 
-            0,  0,  0,  1,  0,  0,  0,  0,  0, 
-            0,  0,  0,  1,  0,  0,  0,  0,  0, 
-            0,  0,  2,  1,  0,  0,  2,  0,  0, 
-            0,  0,  0,  2,  0,  0,  0,  0,  0, 
-            0,  0,  0,  0,  0,  0,  0,  0,  0, 
-            0,  0,  0,  0,  0,  0,  0,  0,  0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         };
 
         GameOuterClass.GameState game_state = GameOuterClass.GameState.newBuilder()
@@ -82,10 +92,10 @@ public class Main {
         MoveGeneration moveGeneration = new MoveGeneration(BOARD_SIZE);
         GomokuUtils gomokuUtils = new GomokuUtils(BOARD_SIZE);
         
-        // int res = staticEvaluation.staticEval(BOARD_SIZE, game_state, 2, 1, (int) game_state.getP2Captures(), (int) game_state.getP1Captures());
+        int res = staticEvaluation.staticEval(BOARD_SIZE, game_state, 2, 1, (int) game_state.getP2Captures(), (int) game_state.getP1Captures());
         // boolean res = staticEvaluation.checkWinCondition(BOARD_SIZE, game_state, 1, (int) game_state.getP1Captures());
 
-        List<GameOuterClass.GameState> res = moveGeneration.generatePossibleMoves(game_state, BOARD_SIZE, (byte) 2, true);
+        // List<GameOuterClass.GameState> res = moveGeneration.generatePossibleMoves(game_state, BOARD_SIZE, (byte) 2, true);
         // List<GomokuUtils.GameStateNode> res = moveGeneration.generateMoveTree(game_state, BOARD_SIZE, (byte) 2, 3);
         // boolean res = moveGeneration.hasThreat(50, BOARD_SIZE, (byte) 2, board);
 
@@ -99,13 +109,13 @@ public class Main {
         // }
         // boolean res = moveGeneration.hasFreeThree(byteList, (byte) 2, 5);
 
-        // System.out.println(res);
+        System.out.println(res);
         
-        System.out.println(res.size());
-        for (GameOuterClass.GameState state : res) {
-            gomokuUtils.prettyPrintBoard(state.getBoard().toByteArray());
-            System.out.println("");
-        }
+        // System.out.println(res.size());
+        // for (GameOuterClass.GameState state : res) {
+        //     gomokuUtils.prettyPrintBoard(state.getBoard().toByteArray());
+        //     System.out.println("");
+        // }
         // gomokuUtils.prettyPrintBoard(Minimax.basicMinimax(game_state, BOARD_SIZE, 2, 2).getBoard().toByteArray());
 
         // Function<Integer, Integer> fn = gomokuUtils::getLeftIdx;

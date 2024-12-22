@@ -588,7 +588,7 @@ public class MoveGeneration {
     }
 
     public List<GomokuUtils.GameStateNode> generateMoveTree(GameOuterClass.GameState state, int boardSize, byte piece, int depth) {
-        List<GomokuUtils.GameStateNode> result = new ArrayList<>(128);
+        List<GomokuUtils.GameStateNode> result = new ArrayList<>(32768);
 
         for (int i = 0; i < depth; i++) {
             byte currPiece = (i % 2 == 0) ? piece : (byte) (piece ==  (byte) 1 ? (byte) 2 : (byte) 1);
