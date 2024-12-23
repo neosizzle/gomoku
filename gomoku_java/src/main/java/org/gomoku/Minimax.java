@@ -1,9 +1,18 @@
 package org.gomoku;
 
 import game.GameOuterClass;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.gomoku.TimeFormatter;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class Minimax {
     public static int minimaxEval(
@@ -98,7 +107,7 @@ public class Minimax {
     }
 
     // Basic minimax function to select the best move from the current state
-    public static GameOuterClass.GameState basicMinimax(GameOuterClass.GameState state, int boardSize, int currPiece, int maxPiece) {
+    public static GameOuterClass.GameState basicMinimax(GameOuterClass.GameState state, int boardSize, int currPiece, int maxPiece){
         // Decorators does not exist in java, so we have to manually measure time
         long startTime = System.nanoTime();  // Start timing
 
@@ -106,7 +115,7 @@ public class Minimax {
         // Generate move tree (you'll need a function for move generation in Java)
         MoveGeneration moveGeneration = new MoveGeneration(boardSize);
         List<GomokuUtils.GameStateNode> moveTree = moveGeneration.generateMoveTree(state, boardSize, (byte) currPiece, depth);
-        // System.out.println("move tree len " + moveTree.size());
+         System.out.println("move tree len " + moveTree.size());
         GameOuterClass.GameState rootNode =  moveTree.get(0).state();
         List<GameOuterClass.GameState> rootChildren =  moveTree.get(0).children();
 
@@ -114,17 +123,40 @@ public class Minimax {
         int maxScoreIdx = -1;
 
         // Iterate through root's children and evaluate them
+        ExecutorService executor = Executors.newFixedThreadPool(16);
+
+        List<Future<Pair<Integer, Integer>>> futures = new ArrayList<>();
+        // Iterate through root's children and evaluate them
         for (int i = 0; i < rootChildren.size(); i++) {
-            GameOuterClass.GameState child = rootChildren.get(i);
-            int childScore = minimaxEval(moveTree, child, boardSize, currPiece != maxPiece, maxPiece, 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
-            // System.out.println("childscire " + childScore + " rc size " + rootChildren.size());
-            if (childScore >= maxScore) {
-                // System.out.println("sel childscire " + childScore + " rc size " + rootChildren.size());
-                maxScore = childScore;
-                maxScoreIdx = i;
-            }
+            int index = i;
+            futures.add(executor.submit(() -> {
+                GameOuterClass.GameState child = rootChildren.get(index);
+                int childScore = minimaxEval(moveTree, child, boardSize, currPiece != maxPiece, maxPiece, 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
+                return new ImmutablePair<>(childScore, index);
+            }));
         }
 
+        List<Pair<Integer, Integer>> sortedList = futures.stream()
+                .map(f -> {
+                    try {
+                        return f.get();  // Get the pair from the future
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                })
+                .sorted(Comparator.comparingInt(integerIntegerPair -> integerIntegerPair != null ? integerIntegerPair.getRight() : null))
+                .toList();
+
+        for (Pair<Integer, Integer> result : sortedList) {
+            int childScore = result.getLeft();
+                int index = result.getRight();
+                if (childScore >= maxScore) {
+                    // System.out.println("sel childscire " + childScore + " rc size " + rootChildren.size());
+                    maxScore = childScore;
+                    maxScoreIdx = index;
+                }
+        }
         GameOuterClass.GameState res = GameOuterClass.GameState.newBuilder().build();
         if (maxScoreIdx >= 0 && maxScoreIdx < rootChildren.size()) {
             res =  rootChildren.get(maxScoreIdx);
