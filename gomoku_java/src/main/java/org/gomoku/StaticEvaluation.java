@@ -125,13 +125,13 @@ public class StaticEvaluation {
         return diagIndices;
     }
 
-    public static int calculateGapPenalty(int startIdx, int endIdx, List<Byte> extraction, byte ourPiece) {
+    public static int calculateGapPenalty(int startIdx, int endIdx, byte[] extraction, byte ourPiece) {
         int penaltyEndIdx = startIdx;
         int penaltyStartIdx = startIdx;
         int res = 0;
         while (penaltyEndIdx != endIdx) {
             // move penalty_end to either the blank or end 
-            while (penaltyEndIdx != endIdx && extraction.get(penaltyEndIdx) != 0) {
+            while (penaltyEndIdx != endIdx && extraction[penaltyEndIdx] != 0) {
                 penaltyEndIdx++;
             }
 
@@ -141,7 +141,7 @@ public class StaticEvaluation {
             }
 
             // move penalty_end to the next non-blank symbol
-            while (penaltyEndIdx != endIdx && extraction.get(penaltyEndIdx) == 0) {
+            while (penaltyEndIdx != endIdx && extraction[penaltyEndIdx] == 0) {
                 penaltyEndIdx++;
             }
             
@@ -151,7 +151,7 @@ public class StaticEvaluation {
             }
 
             // can assume penalty_end is at enemy piece now, move penalty start to a non - our piece
-            while (extraction.get(penaltyStartIdx) == ourPiece) {
+            while (extraction[penaltyStartIdx] == ourPiece) {
                 penaltyStartIdx++;
             }
 
@@ -165,33 +165,33 @@ public class StaticEvaluation {
         return res;
     }
 
-    public static int calculateOpenBonus(List<Byte> extraction, int ourPiece, int movesNext) {
+    public static int calculateOpenBonus(byte[] extraction, int ourPiece, int movesNext) {
         int res = 0;
         int start = -1;
 
-        while (start < extraction.size() - 1) {
+        while (start < extraction.length - 1) {
             start++;
             int gap = 0;
             int power = 3;
             int cumCount = 1;
 
             // keep going until start hits our piece
-            if (extraction.get(start) != ourPiece) {
+            if (extraction[start] != ourPiece) {
                 continue;
             }
 
             // we hit our piece, check for left edge and left enemy
-            if (start == 0 || extraction.get(start - 1) != 0) {
+            if (start == 0 || extraction[start - 1] != 0) {
                 power--;
             }
 
             // move start until the end of combo, counting our pieces
-            while (start < extraction.size()) {
+            while (start < extraction.length) {
                 start++;
-                if (start == extraction.size() || extraction.get(start - 1) != ourPiece) {
+                if (start == extraction.length || extraction[start] != ourPiece) {
                     break;
                 }
-                if (extraction.get(start) == 0) {
+                if (extraction[start] == 0) {
                     if (gap == 0) {
                         gap++;
                         continue;
@@ -203,7 +203,7 @@ public class StaticEvaluation {
             }
 
             // check if we end the combo at an edge / enemy
-            if (start == extraction.size() || extraction.get(start) != 0) {
+            if (start == extraction.length || extraction[start] != 0) {
                 power--;
             }
 
@@ -259,7 +259,7 @@ public class StaticEvaluation {
                 is_win_check.set(0, 1);
                 return 0;
             }
-            
+
             for (int i = 0; i < directionCells.size(); i++) {
                 List<Byte> extraction = directionCells.get(i);
                 int cumCount = 0;
@@ -308,19 +308,18 @@ public class StaticEvaluation {
                     extractionScore += numPiecesSection;
 
                     // Penalize big gaps in our combos (low sensitivity)
-                    extractionScore -= calculateGapPenalty(startIdx, endIdx, extraction, ourPiece);
+                    extractionScore -= calculateGapPenalty(startIdx, endIdx, Bytes.toArray(extraction), ourPiece);
 
                     // Move start index to the current end index
                     startIdx = endIdx;
                 }
-
-                extractionScore += calculateOpenBonus(extraction, ourPiece, movesNext);
-
-                
+                extractionScore += calculateOpenBonus(Bytes.toArray(extraction), ourPiece, movesNext);
                 totalScore += extractionScore;
             }
+
             scoreRes += totalScore;
         }
+
         return scoreRes;
     }
 
