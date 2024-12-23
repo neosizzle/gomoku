@@ -109,13 +109,18 @@ public class Minimax {
     // Basic minimax function to select the best move from the current state
     public static GameOuterClass.GameState basicMinimax(GameOuterClass.GameState state, int boardSize, int currPiece, int maxPiece){
         // Decorators does not exist in java, so we have to manually measure time
-        long startTime = System.nanoTime();  // Start timing
 
         int depth = (state.getNumTurns() > 4) ? 3 : 2;
         // Generate move tree (you'll need a function for move generation in Java)
         MoveGeneration moveGeneration = new MoveGeneration(boardSize);
+        long startTime1 = System.nanoTime();  // Start timing
         List<GomokuUtils.GameStateNode> moveTree = moveGeneration.generateMoveTree(state, boardSize, (byte) currPiece, depth);
-         System.out.println("move tree len " + moveTree.size());
+        long endTime1 = System.nanoTime();    // End timing
+        long durationNs1 = endTime1 - startTime1; // Duration in nanoseconds
+        String formattedDuration1 = TimeFormatter.formatTime(durationNs1);
+
+        System.out.println("Function generateMoveTree took " + formattedDuration1);
+        System.out.println("move tree len " + moveTree.size());
         GameOuterClass.GameState rootNode =  moveTree.get(0).state();
         List<GameOuterClass.GameState> rootChildren =  moveTree.get(0).children();
 
@@ -123,8 +128,9 @@ public class Minimax {
         int maxScoreIdx = -1;
 
         // Iterate through root's children and evaluate them
-        ExecutorService executor = Executors.newFixedThreadPool(16);
+        ExecutorService executor = Executors.newFixedThreadPool(8);
 
+        long startTime = System.nanoTime();  // Start timing
         List<Future<Pair<Integer, Integer>>> futures = new ArrayList<>();
         // Iterate through root's children and evaluate them
         for (int i = 0; i < rootChildren.size(); i++) {
@@ -168,7 +174,7 @@ public class Minimax {
         long durationNs = endTime - startTime; // Duration in nanoseconds
         String formattedDuration = TimeFormatter.formatTime(durationNs);
 
-        System.out.println("Function basicMinimax took " + formattedDuration);
+        System.out.println("Function minimax evals took " + formattedDuration);
 
         return res;
     }

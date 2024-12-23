@@ -6,9 +6,12 @@ import game.GameOuterClass;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
+import java.util.concurrent.Future;
 public class MoveGeneration {
 
     private final GomokuUtils gomokuUtils;
@@ -588,57 +591,61 @@ public class MoveGeneration {
     }
 
     public List<GomokuUtils.GameStateNode> generateMoveTree(GameOuterClass.GameState state, int boardSize, byte piece, int depth) {
-        List<GomokuUtils.GameStateNode> result = new ArrayList<>(32768);
+    List<GomokuUtils.GameStateNode> result = new ArrayList<>(32768);
+    ExecutorService executor = Executors.newFixedThreadPool(8);
+    List<Future<Void>> futures = new ArrayList<>();
 
+    try {
         for (int i = 0; i < depth; i++) {
             byte currPiece = (i % 2 == 0) ? piece : (byte) (piece ==  (byte) 1 ? (byte) 2 : (byte) 1);
 
-            // Generate first depth
+            // Generate first depth (root nodes) sequentially
             if (result.isEmpty()) {
                 List<GameOuterClass.GameState> rootChildren = generatePossibleMoves(state, boardSize, currPiece, true);
                 result.add(new GomokuUtils.GameStateNode(state, rootChildren));
-
                 for (GameOuterClass.GameState child : rootChildren) {
                     result.add(new GomokuUtils.GameStateNode(child, null));
                 }
             } else {
-                List<List<GameOuterClass.GameState>> newLeaves = new ArrayList<>(result.size());
-                
-                // Find leaves and generate their children
+                List<List<GameOuterClass.GameState>> newLeaves = new ArrayList<>();
 
+                // Submit tasks for generating children for each leaf node
                 for (GomokuUtils.GameStateNode node : result) {
                     if (node.children() == null) {
-                        // System.out.print("gen moves " + node.state());
-                        List<GameOuterClass.GameState> leafChildren = generatePossibleMoves(node.state(), boardSize, currPiece, true);
-                        result.set(result.indexOf(node), new GomokuUtils.GameStateNode(node.state(), leafChildren));
-                        newLeaves.add(leafChildren);
+                        futures.add(executor.submit(() -> {
+                            // For each leaf node, generate possible moves in parallel
+                            List<GameOuterClass.GameState> leafChildren = generatePossibleMoves(node.state(), boardSize, currPiece, true);
+                            synchronized (result) {
+                                // Update the node with generated children, thread-safe update
+                                result.set(result.indexOf(node), new GomokuUtils.GameStateNode(node.state(), leafChildren));
+                            }
+                            newLeaves.add(leafChildren);
+                            return null; // Future<Void> type requires returning null or Void
+                        }));
                     }
                 }
-                
-                // int curr_result_len = result.size();
-                // for (int j = 0 ; j < curr_result_len; ++j)
-                // {
-                //     GomokuUtils.GameStateNode node = result.get(j);
-                //     if (result.get(j) == null)
-                //     {
-                //         List<GameOuterClass.GameState> leafChildren = generatePossibleMoves(node.state(), boardSize, currPiece, true);
-                //         result.set(j, new GomokuUtils.GameStateNode(node.state(), leafChildren));
-                //         newLeaves.add(leafChildren);
-                //     }
-                // }
-                
-                // Add new leaves to the result
-                for (List<GameOuterClass.GameState> leafList : newLeaves) {
-                    // System.out.println("root children " + leafList.size());
-                    // if (leafList.size() > 1) {
-                    //     return result;
-                    // }
-                    for (GameOuterClass.GameState leaf : leafList) {
-                        result.add(new GomokuUtils.GameStateNode(leaf, null));
+
+                // Wait for all the tasks to complete before proceeding
+                for (Future<Void> future : futures) {
+                    future.get(); // This blocks until the task completes
+                }
+
+                // Add new leaves to the result list
+                synchronized (result) {
+                    for (List<GameOuterClass.GameState> leafList : newLeaves) {
+                        for (GameOuterClass.GameState leaf : leafList) {
+                            result.add(new GomokuUtils.GameStateNode(leaf, null));
+                        }
                     }
                 }
             }
         }
-        return result;
+    } catch (InterruptedException | ExecutionException e) {
+        e.printStackTrace();
+    } finally {
+        executor.shutdown(); // Properly shut down the executor after completion
     }
+
+    return result;
+}
 }
