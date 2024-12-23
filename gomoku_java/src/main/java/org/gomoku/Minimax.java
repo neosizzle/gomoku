@@ -119,8 +119,8 @@ public class Minimax {
         long durationNs1 = endTime1 - startTime1; // Duration in nanoseconds
         String formattedDuration1 = TimeFormatter.formatTime(durationNs1);
 
-        System.out.println("Function generateMoveTree took " + formattedDuration1);
-        System.out.println("move tree len " + moveTree.size());
+//        System.out.println("Function generateMoveTree took " + formattedDuration1);
+//        System.out.println("move tree len " + moveTree.size());
         GameOuterClass.GameState rootNode =  moveTree.get(0).state();
         List<GameOuterClass.GameState> rootChildren =  moveTree.get(0).children();
 
@@ -130,7 +130,6 @@ public class Minimax {
         // Iterate through root's children and evaluate them
         ExecutorService executor = Executors.newFixedThreadPool(8);
 
-        long startTime = System.nanoTime();  // Start timing
         List<Future<Pair<Integer, Integer>>> futures = new ArrayList<>();
         // Iterate through root's children and evaluate them
         for (int i = 0; i < rootChildren.size(); i++) {
@@ -171,7 +170,7 @@ public class Minimax {
         }
         
         long endTime = System.nanoTime();    // End timing
-        long durationNs = endTime - startTime; // Duration in nanoseconds
+        long durationNs = endTime - startTime1; // Duration in nanoseconds
         String formattedDuration = TimeFormatter.formatTime(durationNs);
 
         System.out.println("Function minimax evals took " + formattedDuration);

@@ -410,8 +410,7 @@ public class MoveGeneration {
         return true;
     }
 
-    public GameOuterClass.GameState placePieceAttempt(int index, byte piece, GameOuterClass.GameState state, int BOARD_SIZE, boolean ignoreSelfCaptured) {
-        byte[] board = state.getBoard().toByteArray();
+    public GameOuterClass.GameState placePieceAttempt(int index, byte piece, final byte[] board, GameOuterClass.GameState state, int BOARD_SIZE, boolean ignoreSelfCaptured) {
 
         // Validate if the board index is empty
         if (board[index] != 0) {
@@ -483,10 +482,10 @@ public class MoveGeneration {
 
             // Check for win condition
             int isEnd = 0;
-            if (piece == (byte) 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 1, newP1Captures)) {
+            if (piece == (byte) 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newBoard, 1, newP1Captures)) {
                 isEnd = 1;
             }
-            if (piece == (byte) 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, gameState, 2, newP2Captures)) {
+            if (piece == (byte) 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newBoard, 2, newP2Captures)) {
                 isEnd = 2;
             }
 
@@ -507,10 +506,10 @@ public class MoveGeneration {
 
         // Check for win condition
         int isEnd = 0;
-        if (piece == (byte) 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newGameState, 1, (int) state.getP1Captures())) {
+        if (piece == (byte) 1 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newBoard, 1, (int) state.getP1Captures())) {
             isEnd = 1;
         }
-        if (piece == (byte) 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newGameState, 2, (int) state.getP2Captures())) {
+        if (piece == (byte) 2 && StaticEvaluation.checkWinCondition(BOARD_SIZE, newBoard, 2, (int) state.getP2Captures())) {
             isEnd = 2;
         }
 
@@ -569,7 +568,7 @@ public class MoveGeneration {
         Set<Integer> indicesToCheck = !threatSearchIndices.isEmpty() ? threatSearchIndices : initialSearchIndices;
 
         for (int i : indicesToCheck) {
-            GameOuterClass.GameState newState = placePieceAttempt(i, piece, state, boardSize, true); // Assuming ignoreSelfCaptured is true
+            GameOuterClass.GameState newState = placePieceAttempt(i, piece, currBoard, state, boardSize, true); // Assuming ignoreSelfCaptured is true
             if (newState != null) {
                  result.add(newState);
             }

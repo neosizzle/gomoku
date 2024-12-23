@@ -231,7 +231,7 @@ public class StaticEvaluation {
 
     public static int staticEvalDirectional(
             int boardSize,
-            GameOuterClass.GameState gameState,
+            final byte[] board,
             byte ourPiece,
             int ourCaptures,
             byte enemyPiece,
@@ -239,7 +239,6 @@ public class StaticEvaluation {
             List<Integer> is_win_check
     ) {
         int dimension = boardSize * boardSize;
-        byte[] board = gameState.getBoard().toByteArray();
         int scoreRes = countPieces(board, ourPiece);
 
         // Generate indices for all directions
@@ -361,11 +360,10 @@ public class StaticEvaluation {
 
     public static boolean checkWinCondition(
             int boardSize,
-            GameOuterClass.GameState gameState,
+            final byte[] board,
             int ourPiece,
             int ourCaptures
     ) {
-        byte[] board = gameState.getBoard().toByteArray();
         GomokuUtils utils = new GomokuUtils(boardSize);
         if (ourCaptures >= 5) {
             return true;
@@ -482,6 +480,7 @@ public class StaticEvaluation {
     ) {
         int movesNext = (gameState.getNumTurns() % 2 == 0) ? 1 : 2;
         // long startTime = System.nanoTime();  // Start timing
+        final byte[] board = gameState.getBoard().toByteArray();
 
         List<Integer> is_win_check_ours = new ArrayList<>(1);
         is_win_check_ours.add(0);
@@ -489,10 +488,10 @@ public class StaticEvaluation {
         List<Integer> is_win_check_enemy = new ArrayList<>(1);
         is_win_check_enemy.add(0);
 
-        int myScore = staticEvalDirectional(boardSize, gameState, (byte)ourPiece, ourCaptures, (byte)enemyPiece, movesNext, is_win_check_ours);
+        int myScore = staticEvalDirectional(boardSize, board, (byte)ourPiece, ourCaptures, (byte)enemyPiece, movesNext, is_win_check_ours);
         int finalScore = myScore + (int) Math.pow(gameState.getNumTurns(), ourCaptures);
 
-        int enemyScore = staticEvalDirectional(boardSize, gameState, (byte)enemyPiece, enemyCaptures, (byte)ourPiece, movesNext, is_win_check_enemy);
+        int enemyScore = staticEvalDirectional(boardSize, board, (byte)enemyPiece, enemyCaptures, (byte)ourPiece, movesNext, is_win_check_enemy);
         finalScore -= enemyScore;
         finalScore -= (int) Math.pow(gameState.getNumTurns(), enemyCaptures);
 
