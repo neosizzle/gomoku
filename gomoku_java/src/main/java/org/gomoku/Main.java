@@ -4,14 +4,13 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Function;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 
 import com.google.protobuf.ByteString;
-
 import game.GameOuterClass;
-import org.gomoku.GomokuUtils;
 
 public class Main {
      private static ByteString encodeBoard( byte[] board ) {
@@ -34,8 +33,9 @@ public class Main {
     
     public static void main(String[] args) throws InterruptedException, IOException {
          int port = 50051;
+        ExecutorService executor = Executors.newFixedThreadPool(8);
          Server server = ServerBuilder.forPort(port)
-                 .addService(new GameService(19))
+                 .addService(new GameService(19, executor))
                  .build();
 
          server.start();
@@ -44,6 +44,7 @@ public class Main {
          Runtime.getRuntime().addShutdownHook(new Thread(() -> {
              System.err.println("Shutting down server...");
              try {
+                 executor.shutdown();
                  server.shutdown().awaitTermination();
                  System.out.println("Server shut down successfully.");
              } catch (InterruptedException e) {
@@ -89,7 +90,7 @@ public class Main {
                 .build();
         
         StaticEvaluation staticEvaluation = new StaticEvaluation();
-        MoveGeneration moveGeneration = new MoveGeneration(BOARD_SIZE);
+//        MoveGeneration moveGeneration = new MoveGeneration(BOARD_SIZE);
         GomokuUtils gomokuUtils = new GomokuUtils(BOARD_SIZE);
         
         int res = staticEvaluation.staticEval(BOARD_SIZE, game_state, 2, 1, (int) game_state.getP2Captures(), (int) game_state.getP1Captures());

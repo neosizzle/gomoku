@@ -3,15 +3,11 @@ package org.gomoku;
 import game.GameOuterClass;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.gomoku.TimeFormatter;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class Minimax {
@@ -107,12 +103,12 @@ public class Minimax {
     }
 
     // Basic minimax function to select the best move from the current state
-    public static GameOuterClass.GameState basicMinimax(GameOuterClass.GameState state, int boardSize, int currPiece, int maxPiece){
+    public static GameOuterClass.GameState basicMinimax(ExecutorService executor, GameOuterClass.GameState state, int boardSize, int currPiece, int maxPiece){
         // Decorators does not exist in java, so we have to manually measure time
 
         int depth = (state.getNumTurns() > 4) ? 3 : 2;
         // Generate move tree (you'll need a function for move generation in Java)
-        MoveGeneration moveGeneration = new MoveGeneration(boardSize);
+        MoveGeneration moveGeneration = new MoveGeneration(boardSize, executor);
         long startTime1 = System.nanoTime();  // Start timing
         List<GomokuUtils.GameStateNode> moveTree = moveGeneration.generateMoveTree(state, boardSize, (byte) currPiece, depth);
         long endTime1 = System.nanoTime();    // End timing
@@ -128,7 +124,6 @@ public class Minimax {
         int maxScoreIdx = -1;
 
         // Iterate through root's children and evaluate them
-        ExecutorService executor = Executors.newFixedThreadPool(8);
 
         List<Future<Pair<Integer, Integer>>> futures = new ArrayList<>();
         // Iterate through root's children and evaluate them

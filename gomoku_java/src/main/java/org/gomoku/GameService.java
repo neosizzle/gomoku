@@ -5,6 +5,8 @@ import game.GameGrpc;
 import game.GameOuterClass;
 import io.grpc.stub.StreamObserver;
 
+import java.util.concurrent.ExecutorService;
+
 public class GameService extends GameGrpc.GameImplBase {
     private final int size;
     private int[] board;
@@ -12,9 +14,9 @@ public class GameService extends GameGrpc.GameImplBase {
     private int numTurns = 0;
     private int[] captures = {0, 0}; // captures[0] = p1 captures, captures[1] = p2 captures
     private GameOuterClass.GameMeta meta;
-    private int currPiece;
+    private final ExecutorService executor;
 
-    public GameService(int size) {
+    public GameService(int size, ExecutorService executor) {
         this.size = size;
         this.board = new int[size * size];
         meta = GameOuterClass.GameMeta.newBuilder()
@@ -23,6 +25,7 @@ public class GameService extends GameGrpc.GameImplBase {
                 .setMode(GameOuterClass.ModeType.PVP_STANDARD)
                 .setGridSize(size)
                 .build();
+        this.executor = executor;
     }
 
     @Override
@@ -47,9 +50,8 @@ public class GameService extends GameGrpc.GameImplBase {
 
     @Override
     public void suggestNextMove(GameOuterClass.GameState request, StreamObserver<GameOuterClass.GameState> responseObserver) {
-        GameOuterClass.GameState suggestedState = null;
-        if (request.getNumTurns() % 2 != 0) suggestedState = Minimax.basicMinimax(request, size, 2, 2);
-        else suggestedState = Minimax.basicMinimax(request, size, 1, 1);
+        int piece = request.getNumTurns() % 2 != 0 ? 2 : 1;
+        GameOuterClass.GameState suggestedState = Minimax.basicMinimax(executor, request, size, piece, piece);
         responseObserver.onNext(suggestedState);
         responseObserver.onCompleted();
     }

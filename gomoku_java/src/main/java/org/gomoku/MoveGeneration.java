@@ -8,16 +8,16 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.concurrent.Future;
+
 public class MoveGeneration {
 
     private final GomokuUtils gomokuUtils;
-
-    MoveGeneration(int boardSize) {
+    private final ExecutorService executor;
+    MoveGeneration(int boardSize, ExecutorService executor) {
         gomokuUtils = new GomokuUtils(boardSize);
+        this.executor = executor;
     }
     public List<List<Integer>> expandAllDirections(int idx, int depth) {
         List<List<Integer>> res = new ArrayList<>(8);
@@ -534,20 +534,17 @@ public class MoveGeneration {
             if (currBoard[i] == 0) {
                 continue;
             }
-
             // Get all indices in a 2-cell range in all directions
             List<Integer> directionalIndices = expandAllDirections(i, 2).stream().flatMap(List::stream)
-            .collect(Collectors.toList());
+            .toList();
 
             // generate a depth 1 directional indices for the case of no threats?
-
             for (Integer val : directionalIndices) {
                 // System.out.println("checking " + val);
 
                 if (currBoard[val] != 0) {
                     continue;
                 }
-
                 // Since we will pick threats over initial search indices,
                 // the the case of no threats, assume that placing the next piece near enemy
                 // piece is the best move
@@ -591,12 +588,11 @@ public class MoveGeneration {
 
     public List<GomokuUtils.GameStateNode> generateMoveTree(GameOuterClass.GameState state, int boardSize, byte piece, int depth) {
     List<GomokuUtils.GameStateNode> result = new ArrayList<>(32768);
-    ExecutorService executor = Executors.newFixedThreadPool(8);
     List<Future<Void>> futures = new ArrayList<>();
 
     try {
         for (int i = 0; i < depth; i++) {
-            byte currPiece = (i % 2 == 0) ? piece : (byte) (piece ==  (byte) 1 ? (byte) 2 : (byte) 1);
+            byte currPiece = (i % 2 == 0) ? piece : (piece ==  (byte) 1 ? (byte) 2 : (byte) 1);
 
             // Generate first depth (root nodes) sequentially
             if (result.isEmpty()) {
@@ -641,8 +637,6 @@ public class MoveGeneration {
         }
     } catch (InterruptedException | ExecutionException e) {
         e.printStackTrace();
-    } finally {
-        executor.shutdown(); // Properly shut down the executor after completion
     }
 
     return result;
