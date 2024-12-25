@@ -111,6 +111,11 @@ public class Minimax {
         MoveGeneration moveGeneration = new MoveGeneration(boardSize, executor);
         long startTime1 = System.nanoTime();  // Start timing
         List<GomokuUtils.GameStateNode> moveTree = moveGeneration.generateMoveTree(state, boardSize, (byte) currPiece, depth);
+        long endTime1 = System.nanoTime();    // End timing
+        long durationNs1 = endTime1 - startTime1; // Duration in nanoseconds
+        String formattedDuration1 = TimeFormatter.formatTime(durationNs1);
+
+//        System.out.println("Function generateMoveTree took " + formattedDuration1);
 //        System.out.println("move tree len " + moveTree.size());
         GameOuterClass.GameState rootNode =  moveTree.get(0).state();
         List<GameOuterClass.GameState> rootChildren =  moveTree.get(0).children();
