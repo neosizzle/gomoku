@@ -33,7 +33,7 @@ public class Main {
     
     public static void main(String[] args) throws InterruptedException, IOException {
          int port = 50051;
-        ExecutorService executor = Executors.newFixedThreadPool(8);
+        ExecutorService executor = Executors.newFixedThreadPool(5);
          Server server = ServerBuilder.forPort(port)
                  .addService(new GameService(19, executor))
                  .build();
