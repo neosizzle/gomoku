@@ -590,6 +590,8 @@ public class MoveGeneration {
     List<GomokuUtils.GameStateNode> result = new ArrayList<>(32768);
     List<Future<Void>> futures = new ArrayList<>();
 
+    // long startTime1 = System.nanoTime();  // Start timing
+
     try {
         for (int i = 0; i < depth; i++) {
             byte currPiece = (i % 2 == 0) ? piece : (piece ==  (byte) 1 ? (byte) 2 : (byte) 1);
@@ -609,7 +611,20 @@ public class MoveGeneration {
                     if (node.children() == null) {
                         futures.add(executor.submit(() -> {
                             // For each leaf node, generate possible moves in parallel
+                            // long startTime = System.nanoTime();  // Start timing
+
                             List<GameOuterClass.GameState> leafChildren = generatePossibleMoves(node.state(), boardSize, currPiece, true);
+                            // long endTime = System.nanoTime();    // End timing
+                            // long durationNs = endTime - startTime; // Duration in nanoseconds
+                            // if (durationNs > 1_000_000_00)
+                            // {
+                            //     String formattedDuration = TimeFormatter.formatTime(durationNs);
+                            //     System.out.println("Function generatemovetree took " + formattedDuration + " " + leafChildren.size());
+                            //     // gomokuUtils.prettyPrintBoard(node.state().getBoard().toByteArray());
+                            // }
+                            // else {
+                            //     System.out.println(leafChildren.size());
+                            // }
                             synchronized (result) {
                                 // Update the node with generated children, thread-safe update
                                 result.set(result.indexOf(node), new GomokuUtils.GameStateNode(node.state(), leafChildren));
@@ -639,6 +654,11 @@ public class MoveGeneration {
         e.printStackTrace();
     }
 
+    // long endTime = System.nanoTime();    // End timing
+    // long durationNs = endTime - startTime1; // Duration in nanoseconds
+    // String formattedDuration = TimeFormatter.formatTime(durationNs);
+
+    // System.out.println("Function generatemovetree took " + formattedDuration);
     return result;
 }
 }

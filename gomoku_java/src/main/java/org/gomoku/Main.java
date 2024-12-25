@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.List;
 
 
 import com.google.protobuf.ByteString;
@@ -32,8 +33,8 @@ public class Main {
 
     
     public static void main(String[] args) throws InterruptedException, IOException {
+        ExecutorService executor = Executors.newFixedThreadPool(5);
          int port = 50051;
-        ExecutorService executor = Executors.newFixedThreadPool(8);
          Server server = ServerBuilder.forPort(port)
                  .addService(new GameService(19, executor))
                  .build();
@@ -59,25 +60,25 @@ public class Main {
         final int BOARD_SIZE = 19;
 
         byte[] board = {
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  2,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  1,  0,  0,  1,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  1,  0,  2,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  1,  2,  2,  2,  2,  1,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  1,  2,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  1,  1,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  1,  2,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+            0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,             
         };
 
         GameOuterClass.GameState game_state = GameOuterClass.GameState.newBuilder()
@@ -90,10 +91,10 @@ public class Main {
                 .build();
         
         StaticEvaluation staticEvaluation = new StaticEvaluation();
-//        MoveGeneration moveGeneration = new MoveGeneration(BOARD_SIZE);
+        MoveGeneration moveGeneration = new MoveGeneration(BOARD_SIZE, executor);
         GomokuUtils gomokuUtils = new GomokuUtils(BOARD_SIZE);
         
-        int res = staticEvaluation.staticEval(BOARD_SIZE, game_state, 2, 1, (int) game_state.getP2Captures(), (int) game_state.getP1Captures());
+        // int res = staticEvaluation.staticEval(BOARD_SIZE, game_state, 2, 1, (int) game_state.getP2Captures(), (int) game_state.getP1Captures());
         // boolean res = staticEvaluation.checkWinCondition(BOARD_SIZE, game_state, 1, (int) game_state.getP1Captures());
 
         // List<GameOuterClass.GameState> res = moveGeneration.generatePossibleMoves(game_state, BOARD_SIZE, (byte) 2, true);
@@ -110,14 +111,14 @@ public class Main {
         // }
         // boolean res = moveGeneration.hasFreeThree(byteList, (byte) 2, 5);
 
-        System.out.println(res);
+        // System.out.println(res);
         
         // System.out.println(res.size());
         // for (GameOuterClass.GameState state : res) {
         //     gomokuUtils.prettyPrintBoard(state.getBoard().toByteArray());
         //     System.out.println("");
         // }
-        // gomokuUtils.prettyPrintBoard(Minimax.basicMinimax(game_state, BOARD_SIZE, 2, 2).getBoard().toByteArray());
+        gomokuUtils.prettyPrintBoard(Minimax.basicMinimax(executor, game_state, BOARD_SIZE, 2, 2).getBoard().toByteArray());
 
         // Function<Integer, Integer> fn = gomokuUtils::getLeftIdx;
         // System.out.println(moveGeneration.checkCaptureBlockDir(fn, 35, BOARD_SIZE, 2, board));
